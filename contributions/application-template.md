@@ -24,6 +24,7 @@ Provide a detailed overview of your skills and experience. Please cover the foll
 - **Tools and Software**: (e.g., Git, GitHub, Figma, Jenkins)
 - **Professional Experience**: Describe relevant professional experience, projects, or open-source contributions.
 - **Certifications (Optional)**: List any certifications related to your role.
+- **Additional Skills (Optional)**: List any additional skills to support your application.
 
 ### 🌍 4. Notfall Engineers Mission Alignment:
 - **Why do you want to join Notfall Engineers?**

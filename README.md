@@ -22,7 +22,7 @@ With **Notfall Engineers**, businesses, property owners, property managers, tena
 
 Here’s a quick look at essential resources for getting started with Notfall Engineers:
 
-- 📋 **[Open Roles and Requirements](https://github.com/Coulbe/notfall-contributors/tree/main/contributions/open-roles.md)**  
+- 📋 **[Open Roles and Requirements](https://github.com/Coulbe/notfall-contributors/blob/main/open-roles.md)**  
   Find available roles and requirements to kickstart your journey as a contributor. Each role comes with detailed responsibilities and reward structures.
 
 - 📝 **[Application Template](https://github.com/Coulbe/notfall-contributors/tree/main/contributions/application-template.md)**  

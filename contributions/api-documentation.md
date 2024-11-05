@@ -293,10 +293,15 @@ Checks an engineer’s current availability.
 | Status Code |
 
  Description                               |
-|-------------|-------------------------------------------|
+
 | 400         | Bad Request - Invalid input or format     |
+
 | 401         | Unauthorized - Missing/invalid token      |
+
 | 403         | Forbidden - Access not allowed for role   |
+
 | 404         | Not Found - Resource not available        |
+
 | 409         | Conflict - Data conflict, e.g., assignment conflict |
+
 | 500         | Server Error - General internal error     |

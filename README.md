@@ -67,7 +67,6 @@ By joining the Notfall Engineers community, you’re not only contributing to a 
 If you have any questions or need assistance, here are multiple ways to connect with us:
 
 - **💬 GitHub Discussions**: Join our GitHub Discussions for community support, where you can ask questions, share ideas, and engage with other contributors and our core team.
-- **📱 Slack Channel**: Request access to our private Slack community for real-time support and collaboration. Email us with the subject line “Slack Access Request” at **support@notfallengineers.com** to receive your invite.
 - **📝 Weekly Q&A Sessions**: Join our live Q&A sessions every Friday, where our team is available to answer questions, discuss the project, and share insights. Register [here](#) to attend (link to be updated).
 
 Thank you for considering joining **Notfall Engineers On-Demand**. Let’s build something impactful together! 

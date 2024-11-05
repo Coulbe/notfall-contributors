@@ -22,10 +22,10 @@ With **Notfall Engineers**, businesses, property owners, property managers, tena
 
 Here’s a quick look at essential resources for getting started with Notfall Engineers:
 
-- 📋 **[Open Roles and Requirements](https://github.com/Coulbe/notfall-contributors/blob/main/open-roles.md)**  
+- 📋 **[Open Roles and Requirements](https://github.com/Coulbe/notfall-contributors/tree/main/contributions/open-roles.md)**  
   Find available roles and requirements to kickstart your journey as a contributor. Each role comes with detailed responsibilities and reward structures.
 
-- 📝 **[Application Template](https://github.com/Coulbe/notfall-contributors/blob/main/application-template.md)**  
+- 📝 **[Application Template](https://github.com/Coulbe/notfall-contributors/tree/main/contributions/application-template.md)**  
   Ready to apply? Use our application template to introduce yourself and outline your experience, goals, and interests.
 
 - 🔧 **[Contributor Onboarding Guide](https://github.com/Coulbe/notfall-contributors/tree/main/contributions/onboarding-guide.md)**  
@@ -66,12 +66,11 @@ By joining the Notfall Engineers community, you’re not only contributing to a 
 
 If you have any questions or need assistance, here are multiple ways to connect with us:
 
-**💬 GitHub Discussions**: Join our GitHub Discussions for community support, where you can ask questions, share ideas, and engage with other contributors and our core team.
-
+- **💬 GitHub Discussions**: Join our GitHub Discussions for community support, where you can ask questions, share ideas, and engage with other contributors and our core team.
 - **📱 Slack Channel**: Request access to our private Slack community for real-time support and collaboration. Email us with the subject line “Slack Access Request” at **support@notfallengineers.com** to receive your invite.
-
 - **📝 Weekly Q&A Sessions**: Join our live Q&A sessions every Friday, where our team is available to answer questions, discuss the project, and share insights. Register [here](#) to attend (link to be updated).
 
 Thank you for considering joining **Notfall Engineers On-Demand**. Let’s build something impactful together! 
 
 ![Contact Us Banner](assets/contact_us_banner.png)
+

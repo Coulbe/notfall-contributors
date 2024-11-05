@@ -1,100 +1,111 @@
 ![Notfall Engineers On-Demand](assets/notfall_logo.png)
 
 # © 2024 Notfall Engineers On-Demand, a property of Notfall Ltd. All rights reserved.
+🛡️ License Information for Notfall Engineers On-Demand
 
-## 🛡️ Licence Information for Notfall Engineers On-Demand
-Welcome to **Notfall Engineers On-Demand**! Our platform merges advanced technology with innovative maintenance solutions to revolutionise building management. This **semi-open-source** project allows select contributors to collaborate under a controlled framework while preserving Notfall Technologies Ltd.'s ownership rights.
+## 🛡️ License Information for Notfall Engineers On-Demand
 
-### 🔑 Key Licence Terms
+Welcome to **Notfall Engineers On-Demand**! We’re committed to transforming the emergency building maintenance industry by combining advanced technology with strategic innovation. Our platform brings together AI, blockchain, and cloud-based solutions to deliver efficiency, transparency, and seamless service for property managers, tenants, and maintenance professionals alike. As a **semi-open-source** project, we invite contributions within a controlled framework, while retaining full rights and ownership with **Notfall Technologies Ltd.**
+
+---
+
+### 🔑 Key License Terms
 
 #### 1. **Copyright and Ownership**
-All components of **Notfall Engineers On-Demand**—software code, architecture, branding, and related assets—are the exclusive property of **Notfall Technologies Ltd.** and protected by international copyright laws.
+All components of **Notfall Engineers On-Demand**—including software code, architecture, assets, designs, and branding—are the exclusive property of **Notfall Technologies Ltd.** and are protected under global copyright, intellectual property, and trademark laws.
 
-- **Copyright Notice**:  
-  © 2024 Notfall Ltd. All rights reserved.
-  
-- **Trademarks**:  
-  "Notfall Engineers," the logo, and all associated brand assets are trademarks of Notfall Technologies Ltd. Unauthorised use of these assets is strictly prohibited.
+- **Copyright Notice**  
+  © 2024 Notfall Ltd. All rights reserved. Unauthorized reproduction, modification, or distribution of any part of this platform, in whole or in part, without explicit permission from Notfall Technologies Ltd., is prohibited.
 
+- **Trademarks**  
+  The "Notfall Engineers" name, logo, and associated branding elements are registered trademarks of Notfall Technologies Ltd. Usage of these trademarks without written authorization is strictly prohibited, including any adaptations, derivative logos, or imagery that could cause confusion or imply association.
+
+---
 
 #### 2. **Contribution Agreement**
-We invite contributions from approved developers, engineers, writers, and other specialists. By contributing, you agree to these terms:
+To foster innovation and growth, we welcome contributions from approved developers, engineers, writers, and technical specialists. By contributing, you agree to the following terms:
 
-- **Licence of Contributions**:  
-  Contributions are integrated into the project and licensed to Notfall Technologies Ltd.
-  
-- **Notcoins Reward Programme**:  
-  Contributors earn **Notcoins**, our native reward token, based on the impact and complexity of tasks completed.
-  
-- **Attribution and Acknowledgement**:  
-  While contributions may be acknowledged in project documentation and promotional materials, attribution is not obligatory.
+- **License of Contributions**  
+  All contributions to the Notfall Engineers codebase or documentation are fully licensed to Notfall Technologies Ltd. By submitting code, content, or documentation, you grant Notfall Technologies Ltd. perpetual, irrevocable, and exclusive rights to use, modify, and integrate your contributions into the Notfall Engineers platform.
 
+- **Notcoins Reward Program**  
+  Contributors are eligible to earn **Notcoins**, our native reward token, based on the impact, complexity, and quality of their contributions. Notcoins represent equity participation in the growth and success of the Notfall Engineers platform, allowing contributors to benefit as the platform expands.
+
+- **Attribution and Acknowledgement**  
+  Contributions may be acknowledged in documentation, contributor listings, marketing materials, or community updates at the discretion of Notfall Technologies Ltd. While we aim to recognize valuable contributions, attribution is not guaranteed or obligatory.
+
+---
 
 #### 3. **Access and Distribution**
-Notfall Engineers operates on a controlled-access basis, tailored to the role and permissions of each contributor.
+Notfall Engineers operates under a controlled-access model to ensure project security, data integrity, and proprietary rights.
 
-- **Controlled Access**:  
-  Contributors are granted access to specific modules or files needed for their work only, with restricted access to other project areas.
-  
-- **No Redistribution**:  
-  Redistribution of code or proprietary information without explicit permission from Notfall Technologies Ltd. is strictly forbidden.
-  
-- **Confidentiality Obligation**:  
-  Contributors must handle project information with confidentiality, ensuring proprietary data remains secure.
+- **Controlled Access**  
+  Access to the codebase is granted based on role-specific permissions. Contributors receive access only to modules, features, or files relevant to their assigned tasks. This ensures project security and minimizes exposure to proprietary code not directly relevant to individual contributions.
 
+- **No Redistribution**  
+  Redistribution, reproduction, or external publication of any code, documentation, or proprietary information without explicit permission from Notfall Technologies Ltd. is prohibited. Contributors may not share, distribute, or otherwise disclose Notfall Engineers source code, configurations, or sensitive project information to unauthorized parties.
+
+- **Confidentiality Obligation**  
+  Contributors are required to handle all project information with the highest level of confidentiality. Unauthorized sharing or exposure of proprietary information, including API keys, third-party integrations, and business logic, is a serious breach of trust and will lead to immediate termination of access.
+
+---
 
 #### 4. **Non-Commercial Use**
-Notfall Engineers On-Demand is strictly for internal and non-commercial use by approved contributors.
+The Notfall Engineers platform and all associated intellectual property are licensed for non-commercial use within the scope of the project’s goals and mission.
 
-- **Commercial Use Prohibition**:  
-  Without explicit permission, the project may not be used, sold, or sublicensed for commercial purposes.
-  
-- **No External Modifications**:  
-  Modifying the codebase for use in external or commercial projects without permission is not permitted.
-  
-- **No Derivative Works**:  
-  Creating derivative works from Notfall Engineers On-Demand is prohibited unless prior written consent is obtained.
+- **Commercial Use Prohibition**  
+  Contributors and users are prohibited from using, selling, sublicensing, or otherwise commercializing any portion of the Notfall Engineers platform or its code without express written permission from Notfall Technologies Ltd.
 
+- **No External Modifications**  
+  Modification, adaptation, or repurposing of the Notfall Engineers codebase for external or commercial projects is not permitted. Contributors may not derive independent or competing software projects based on Notfall Engineers code, structure, or design.
+
+- **No Derivative Works**  
+  Creation of derivative works based on any part of the Notfall Engineers platform, including code, UI/UX components, documentation, or branding, is strictly prohibited unless prior written consent is granted by Notfall Technologies Ltd.
+
+---
 
 #### 5. **Brand Usage**
-The **Notfall Engineers** brand is integral to our identity. Usage of these brand assets without authorisation is restricted.
+The **Notfall Engineers** brand identity, including its logo, name, and visual elements, is an integral part of our platform’s value and identity. Unauthorized use, adaptation, or reproduction of brand assets is restricted.
 
-- **Logo and Branding**:  
-  The Notfall logo, name, and related branding may only be used with prior written approval.
-  
-- **Contributor Recognition**:  
-  Contributors may share details of their work for professional portfolios, adhering to guidelines that protect brand integrity.
+- **Logo and Branding**  
+  The Notfall Engineers logo, name, and branding elements are protected assets and may only be used with prior written authorization. This includes public or online displays of logos in presentations, portfolios, or promotional materials.
 
+- **Contributor Recognition**  
+  Contributors may refer to their involvement in Notfall Engineers for professional purposes, such as resumes, LinkedIn profiles, or personal portfolios. However, all representations must comply with Notfall Engineers branding standards to ensure the integrity of the brand. Specific guidelines will be provided upon request.
+
+---
 
 #### 6. **Third-Party Integrations**
-Notfall Engineers On-Demand utilises various third-party platforms, including **Google Cloud**, **Ethereum blockchain**, and AI tools.
+Notfall Engineers integrates with a variety of third-party platforms, such as **Google Cloud**, **Ethereum blockchain**, and **AI-driven tools** for enhanced functionality and security.
 
-- **Compliance with Third-Party Terms**:  
-  Contributors are expected to follow all terms of third-party services when using them in the Notfall Engineers environment.
-  
-- **Restricted Use of APIs and Services**:  
-  Access to APIs and services provided by Notfall is strictly for project-related use and may not be extended beyond Notfall Engineers.
+- **Compliance with Third-Party Terms**  
+  Contributors must adhere to all terms and conditions of third-party services utilized within Notfall Engineers, including API usage, data handling, and service-level agreements. Violation of third-party terms may result in restricted access or other corrective actions.
 
+- **Use of APIs and Services**  
+  Access to APIs, SDKs, and services provided by Notfall Engineers or its partners is strictly limited to project-related activities and may not be extended, repurposed, or modified for external projects or personal use.
+
+---
 
 #### 7. **Termination of Contributor Access**
-Notfall Technologies Ltd. reserves the right to revoke contributor access for any behaviour or actions that may harm the project.
+Notfall Technologies Ltd. reserves the right to terminate contributor access to Notfall Engineers at any time for violations of these license terms or any other behavior detrimental to the project’s integrity and goals.
 
-- **Violation of Licence Terms**:  
-  Breach of these terms may result in immediate revocation of access.
-  
-- **Confidentiality Breach**:  
-  Unauthorised sharing of proprietary information will result in access termination.
-  
-- **Non-Compliance with Standards**:  
-  Failure to comply with project standards and guidelines may lead to access being revoked.
+- **Violation of License Terms**  
+  Any breach of the terms outlined in this license agreement will result in immediate revocation of contributor access to the platform. This includes unauthorized access, redistribution, or misuse of project assets or code.
 
+- **Confidentiality Breach**  
+  Contributors found in violation of confidentiality obligations, including sharing proprietary information with unauthorized parties or using project information for non-approved purposes, will have their access terminated and may face legal consequences.
 
+- **Non-Compliance with Project Standards**  
+  Persistent failure to adhere to project standards, coding guidelines, or contribution protocols may also result in access removal. Contributors are encouraged to seek guidance and clarification to ensure compliance with Notfall Engineers standards.
+
+---
 
 #### 8. **Contact for Permissions and Clarifications**
-
-For permissions, questions, or clarifications regarding these terms, please reach out to us at:  
+For any questions, permissions requests, or clarifications regarding these terms, please contact us at:  
 **📧 [legal@notfallengineers.com](mailto:legal@notfallengineers.com)**
 
+Our legal team is available to assist with clarifications regarding usage rights, access permissions, and other terms outlined in this license agreement.
 
+---
 
-By contributing to **Notfall Engineers On-Demand**, you agree to these terms, supporting the secure and innovative development of this platform and the goals of **Notfall Technologies Ltd.**. Thank you for your dedication to shaping the future of building maintenance with us.
+By contributing to **Notfall Engineers On-Demand**, you agree to these terms and acknowledge the importance of maintaining the integrity, security, and innovation goals of Notfall Technologies Ltd. Thank you for your commitment to shaping the future of emergency building maintenance with us.

@@ -25,7 +25,7 @@ Here’s a quick look at essential resources for getting started with Notfall En
 - 📋 **[Open Roles and Requirements](https://github.com/Coulbe/notfall-contributors/blob/main/open-roles.md)**  
   Find available roles and requirements to kickstart your journey as a contributor. Each role comes with detailed responsibilities and reward structures.
 
-- 📝 **[Application Template](https://github.com/Coulbe/notfall-contributors/tree/main/contributions/application-template.md)**  
+- 📝 **[Application Template](https://github.com/Coulbe/notfall-contributors/blob/main/application-template.md)**  
   Ready to apply? Use our application template to introduce yourself and outline your experience, goals, and interests.
 
 - 🔧 **[Contributor Onboarding Guide](https://github.com/Coulbe/notfall-contributors/tree/main/contributions/onboarding-guide.md)**  

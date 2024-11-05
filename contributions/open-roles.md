@@ -7,13 +7,13 @@ Welcome to **Notfall Engineers On-Demand**! We’re thrilled to have passionate 
 ---
 
 ## 📑 **Table of Contents**
-1. [Frontend Developer](#frontend-developer)
-2. [Backend Developer](#backend-developer)
-3. [QA Engineer](#qa-engineer)
-4. [Technical Writer](#technical-writer)
-5. [UI/UX Designer](#uiux-designer)
-6. [Data Scientist / AI Engineer](#data-scientist--ai-engineer)
-7. [DevOps Engineer](#devops-engineer)
+1. [Frontend Developer](#1-frontend-developer)
+2. [Backend Developer](#2-backend-developer)
+3. [QA Engineer](#3-qa-engineer)
+4. [Technical Writer](#4-technical-writer)
+5. [UI/UX Designer](#5-uiux-designer)
+6. [Data Scientist / AI Engineer](#6-data-scientist--ai-engineer)
+7. [DevOps Engineer](#7-devops-engineer)
 
 ---
 
@@ -197,4 +197,3 @@ Thank you for considering a role with **Notfall Engineers On-Demand**. Every con
 ---
 
 ![Join Our Team](assets/join_us_banner.png)
-

@@ -1,0 +1,22 @@
+name: "Request Contributor Access"
+about: "Request to become a contributor for this repository"
+title: "Request Contributor Access"
+labels: ["registration"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your interest in contributing to this project! Please fill out the following information.
+
+  - type: input
+    id: github_username
+    attributes:
+      label: Your GitHub Username
+      description: Please provide your GitHub username.
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why do you want to contribute?
+      description: Briefly describe your interest in this project.

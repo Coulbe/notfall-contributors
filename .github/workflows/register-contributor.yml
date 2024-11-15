@@ -1,59 +1,60 @@
-name: Add Contributors
+name: "Request Contributor Access"
+about: "Submit a request to become a contributor"
+title: "Request Contributor Access"
+labels: ["registration"]
 
-on:
-  issues:
-    types: [opened]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your interest in contributing! Please provide the following details to help us evaluate your request.
 
-jobs:
-  add-contributor:
-    runs-on: ubuntu-latest
+  - type: input
+    id: github_username
+    attributes:
+      label: Your GitHub Username
+      description: Enter your GitHub username.
 
-    steps:
-      - name: Check if the issue is a registration request
-        uses: actions/github-script@v6
-        id: check-registration
-        with:
-          script: |
-            if (!context.payload.issue.labels.some(label => label.name === 'registration')) {
-              return { approved: false };
-            }
-            return { approved: true, username: context.payload.issue.user.login };
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why do you want to contribute?
+      description: Briefly explain your interest in this project and how you plan to contribute.
 
-      - name: Add user as a collaborator
-        if: steps.check-registration.outputs.approved == 'true'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const username = steps.check-registration.outputs.username;
-            await github.repos.addCollaborator({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              username: username,
-              permission: "write"
-            });
-            console.log(`User ${username} added as a contributor.`);
+  - type: dropdown
+    id: area_of_interest
+    attributes:
+      label: Contribution Area
+      description: Select the area(s) you want to contribute to.
+      options:
+        - Backend Development
+        - Frontend Development
+        - Documentation
+        - Testing
+        - Other
 
-      - name: Comment on the issue
-        if: steps.check-registration.outputs.approved == 'true'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const username = steps.check-registration.outputs.username;
-            await github.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              body: `Hi @${username}, your request to become a contributor has been approved! You now have write access to this repository.`
-            });
+  - type: dropdown
+    id: experience_level
+    attributes:
+      label: Experience Level
+      description: Select your experience level.
+      options:
+        - Beginner
+        - Intermediate
+        - Advanced
+        - Expert
 
-      - name: Close the issue
-        if: steps.check-registration.outputs.approved == 'true'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            await github.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              state: "closed",
-            });
+  - type: input
+    id: location
+    attributes:
+      label: Your Location
+      description: Provide your location for timezone considerations.
+
+  - type: checkboxes
+    id: guidelines
+    attributes:
+      label: Contribution Guidelines Agreement
+      description: Confirm that you have read and agree to the contribution guidelines.
+      options:
+        - label: I have read and agree to the contribution guidelines.
+          required: true

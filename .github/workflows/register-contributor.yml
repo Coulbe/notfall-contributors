@@ -1,22 +1,59 @@
-name: "Request Contributor Access"
-about: "Request to become a contributor for this repository"
-title: "Request Contributor Access"
-labels: ["registration"]
+name: Add Contributors
 
-body:
-  - type: markdown
-    attributes:
-      value: |
-        Thank you for your interest in contributing to this project! Please fill out the following information.
+on:
+  issues:
+    types: [opened]
 
-  - type: input
-    id: github_username
-    attributes:
-      label: Your GitHub Username
-      description: Please provide your GitHub username.
+jobs:
+  add-contributor:
+    runs-on: ubuntu-latest
 
-  - type: textarea
-    id: reason
-    attributes:
-      label: Why do you want to contribute?
-      description: Briefly describe your interest in this project.
+    steps:
+      - name: Check if the issue is a registration request
+        uses: actions/github-script@v6
+        id: check-registration
+        with:
+          script: |
+            if (!context.payload.issue.labels.some(label => label.name === 'registration')) {
+              return { approved: false };
+            }
+            return { approved: true, username: context.payload.issue.user.login };
+
+      - name: Add user as a collaborator
+        if: steps.check-registration.outputs.approved == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const username = steps.check-registration.outputs.username;
+            await github.repos.addCollaborator({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: username,
+              permission: "write"
+            });
+            console.log(`User ${username} added as a contributor.`);
+
+      - name: Comment on the issue
+        if: steps.check-registration.outputs.approved == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const username = steps.check-registration.outputs.username;
+            await github.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `Hi @${username}, your request to become a contributor has been approved! You now have write access to this repository.`
+            });
+
+      - name: Close the issue
+        if: steps.check-registration.outputs.approved == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              state: "closed",
+            });

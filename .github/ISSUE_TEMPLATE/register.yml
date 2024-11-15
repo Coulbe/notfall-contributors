@@ -1,22 +1,82 @@
-name: "Request Contributor Access"
-about: "Request to become a contributor for this repository"
-title: "Request Contributor Access"
-labels: ["registration"]
+name: Contributor Registration
 
-body:
-  - type: markdown
-    attributes:
-      value: |
-        Thank you for your interest in contributing to this project! Please fill out the following information.
+on:
+  issues:
+    types: [opened, edited]
 
-  - type: input
-    id: github_username
-    attributes:
-      label: Your GitHub Username
-      description: Please provide your GitHub username.
+jobs:
+  process-registration:
+    runs-on: ubuntu-latest
 
-  - type: textarea
-    id: reason
-    attributes:
-      label: Why do you want to contribute?
-      description: Briefly describe your interest in this project.
+    steps:
+      - name: Check if the issue is a registration request
+        id: check-registration
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const labels = context.payload.issue.labels.map(label => label.name);
+            if (labels.includes('registration')) {
+              return { isRegistration: true, username: context.payload.issue.user.login };
+            }
+            return { isRegistration: false };
+
+      - name: Validate User Information
+        if: steps.check-registration.outputs.isRegistration == 'true'
+        id: validate-user
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issueBody = context.payload.issue.body;
+            if (!issueBody.includes("I have read and agree to the contribution guidelines")) {
+              throw new Error("User has not agreed to the contribution guidelines.");
+            }
+            if (issueBody.includes("Beginner")) {
+              return { approvalNeeded: true, username: context.payload.issue.user.login };
+            }
+            return { approvalNeeded: false, username: context.payload.issue.user.login };
+
+      - name: Add Approved User as Collaborator
+        if: steps.validate-user.outputs.approvalNeeded == 'false'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const username = steps.validate-user.outputs.username;
+
+            // Add user as a collaborator
+            await github.repos.addCollaborator({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: username,
+              permission: "write"
+            });
+
+            // Notify the user
+            await github.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `Hi @${username}, your request has been approved! You now have write access. Welcome aboard!`
+            });
+
+      - name: Assign Manual Review for Beginners
+        if: steps.validate-user.outputs.approvalNeeded == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const username = steps.validate-user.outputs.username;
+
+            // Assign the issue to a maintainer for review
+            await github.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              assignees: ["maintainer-username"]
+            });
+
+            // Notify the maintainer
+            await github.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `This request requires manual review. Please review the request from @${username}.`
+            });

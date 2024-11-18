@@ -1,35 +1,32 @@
 import React, { useState, useEffect } from "react";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { fetchTokenDistribution } from "../../services/analyticsService";
 import Breadcrumbs from "../common/Breadcrumbs";
 import Loader from "../common/Loader";
 import ErrorMessage from "../common/ErrorMessage";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import AnalyticsLegend from "./AnalyticsLegend";
 import "./analytics.css";
 
 const TokenDistributionChart = () => {
-  // State variables
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Breadcrumb paths
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#A020F0"];
+
   const breadcrumbPaths = [
     { label: "Home", to: "/" },
     { label: "Analytics", to: "/analytics" },
     { label: "Token Distribution Chart", to: "" },
   ];
 
-  // Colors for chart slices
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#A020F0"];
-
-  // Fetch token distribution data on mount
   useEffect(() => {
     const getData = async () => {
       try {
         const response = await fetchTokenDistribution();
         setData(response);
       } catch (err) {
-        setError("Failed to load token distribution data. Please try again.");
+        setError("Failed to load token distribution data.");
       } finally {
         setLoading(false);
       }
@@ -39,11 +36,9 @@ const TokenDistributionChart = () => {
   }, []);
 
   return (
-    <div className="token-distribution-chart">
+    <div className="analytics-chart">
       <Breadcrumbs paths={breadcrumbPaths} />
       <h1>Token Distribution Chart</h1>
-
-      {/* Conditional Rendering: Loading, Error, or Chart */}
       {loading ? (
         <Loader />
       ) : error ? (
@@ -70,6 +65,7 @@ const TokenDistributionChart = () => {
               <Legend />
             </PieChart>
           </ResponsiveContainer>
+          <AnalyticsLegend data={data} />
         </div>
       )}
     </div>

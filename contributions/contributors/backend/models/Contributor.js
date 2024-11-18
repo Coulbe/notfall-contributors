@@ -1,6 +1,3 @@
-const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
-
 const contributorSchema = new mongoose.Schema(
   {
     username: { type: String, required: true, unique: true },
@@ -8,7 +5,7 @@ const contributorSchema = new mongoose.Schema(
     password: { type: String, required: true }, // Hashed password
     wallet: {
       address: { type: String, required: true },
-      balance: { type: Number, default: 0 },
+      balance: { type: Number, default: 0 }, // Total token balance
     },
     roles: [{ type: String, enum: ["Contributor", "Admin", "ProjectManager"], default: "Contributor" }],
     contributions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Contribution" }],
@@ -23,22 +20,15 @@ const contributorSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Middleware to hash passwords before saving
-contributorSchema.pre("save", async function (next) {
-  if (this.isModified("password")) {
-    this.password = await bcrypt.hash(this.password, 10);
+// Method to deduct tokens (useful for transfers or penalties)
+contributorSchema.methods.deductTokens = async function (amount) {
+  if (this.wallet.balance < amount) {
+    throw new Error("Insufficient token balance");
   }
-  next();
-});
 
-// Method to verify password
-contributorSchema.methods.verifyPassword = async function (password) {
-  return bcrypt.compare(password, this.password);
-};
-
-// Static method to fetch contributors with roles
-contributorSchema.statics.findByRole = function (role) {
-  return this.find({ roles: role });
+  this.wallet.balance -= amount;
+  return this.save();
 };
 
 module.exports = mongoose.model("Contributor", contributorSchema);
+

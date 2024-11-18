@@ -10,12 +10,12 @@ const api = axios.create({
   },
 });
 
-// Add retry functionality for failed requests
+// Retry failed requests with exponential backoff
 axiosRetry(api, {
   retries: 3, // Retry up to 3 times
   retryDelay: (retryCount) => retryCount * 1000, // Exponential backoff: 1s, 2s, 3s
   retryCondition: (error) =>
-    error.response?.status >= 500 || !error.response, // Retry only on server errors or no response
+    error.response?.status >= 500 || !error.response, // Retry on server errors or network issues
 });
 
 // Request Interceptor: Add Authorization Token and Custom Headers
@@ -25,7 +25,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // Add additional custom headers if needed
+    // Optionally add custom headers
     config.headers["X-Custom-Header"] = "CustomHeaderValue";
     return config;
   },
@@ -44,20 +44,22 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      // Log error responses for debugging
-      console.error("API Error Response:", error.response);
+      console.error("API Error Response:", error.response); // Log error response for debugging
 
-      if (error.response.status === 401) {
-        // Unauthorized: Log out the user and redirect to login
-        console.warn("Unauthorized. Redirecting to login...");
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      } else if (error.response.status === 403) {
-        // Forbidden: Show a permission error
-        alert("You do not have permission to perform this action.");
-      } else if (error.response.status >= 500) {
-        // Server error: Display a generic message
-        alert("A server error occurred. Please try again later.");
+      switch (error.response.status) {
+        case 401: // Unauthorized
+          console.warn("Unauthorized. Redirecting to login...");
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+          break;
+        case 403: // Forbidden
+          console.warn("Forbidden access.");
+          alert("You do not have permission to perform this action.");
+          break;
+        case 500: // Server Error
+        default:
+          alert("A server error occurred. Please try again later.");
+          break;
       }
     } else {
       // Handle network errors or no response
@@ -69,5 +71,4 @@ api.interceptors.response.use(
   }
 );
 
-// Export the Axios instance
 export default api;

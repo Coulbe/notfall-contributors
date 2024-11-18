@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const {
   getTaskFolder,
   getFolderAccessLogs,
@@ -7,90 +7,171 @@ const {
   checkFolderAccess,
   previewFolderContents,
   scheduleFolderAccessRevocation,
-} = require('../controllers/folderController');
-const { verifyToken } = require('../middleware/authMiddleware');
-const { validateRole, checkPermissions, logAccessAttempt } = require('../middleware/roleMiddleware');
-const { logDataModification } = require('../middleware/auditMiddleware');
+  createFolder,
+  getContributorFolders,
+  getFolderDetails,
+  updateFolder,
+  deleteFolder,
+  assignTaskToFolder,
+  organizeTasksInFolder,
+  batchAssignFolderAccess,
+} = require("../controllers/folderController");
+const { verifyToken } = require("../middleware/authMiddleware");
+const {
+  validateRole,
+  checkPermissions,
+  logAccessAttempt,
+  validateBatchOperations,
+} = require("../middleware/roleMiddleware");
+const { logDataModification } = require("../middleware/auditMiddleware");
 
 const router = express.Router();
 
 /**
- * @route   GET /folders/:taskId
- * @desc    Get folder path for a task (Contributor, Admin)
- * @access  Protected
+ * Folder Management Routes
  */
-router.get(
-  '/:taskId',
+
+// Create a new folder
+router.post(
+  "/",
   verifyToken,
-  logAccessAttempt('folders'),
-  checkPermissions('assignedFolders'),
+  validateRole(["Admin", "ProjectManager"]),
+  logDataModification("folders", "CREATE"),
+  createFolder
+);
+
+// Get all folders for a contributor
+router.get(
+  "/:contributorId",
+  verifyToken,
+  checkPermissions("viewFolders"),
+  logAccessAttempt("folders"),
+  getContributorFolders
+);
+
+// Get detailed folder information, including tasks and nested folders
+router.get(
+  "/:folderId/details",
+  verifyToken,
+  checkPermissions("viewFolders"),
+  logAccessAttempt("folders"),
+  getFolderDetails
+);
+
+// Update folder details (e.g., rename)
+router.put(
+  "/:folderId",
+  verifyToken,
+  validateRole(["Admin", "ProjectManager"]),
+  logDataModification("folders", "UPDATE"),
+  updateFolder
+);
+
+// Delete a folder and optionally its contents
+router.delete(
+  "/:folderId",
+  verifyToken,
+  validateRole(["Admin"]),
+  logDataModification("folders", "DELETE"),
+  deleteFolder
+);
+
+// Organize tasks in a folder (e.g., by priority, status, etc.)
+router.get(
+  "/:folderId/organize-tasks",
+  verifyToken,
+  checkPermissions("manageFolders"),
+  logAccessAttempt("folders"),
+  organizeTasksInFolder
+);
+
+/**
+ * Folder-Task Assignment Routes
+ */
+
+// Assign a single task to a folder
+router.post(
+  "/assign-task",
+  verifyToken,
+  validateRole(["Admin", "ProjectManager"]),
+  logDataModification("folders", "ASSIGN_TASK"),
+  assignTaskToFolder
+);
+
+/**
+ * Folder Access Control Routes
+ */
+
+// Get folder path for a task
+router.get(
+  "/:taskId",
+  verifyToken,
+  logAccessAttempt("folders"),
+  checkPermissions("assignedFolders"),
   getTaskFolder
 );
 
-/**
- * @route   GET /folders/logs
- * @desc    Fetch folder access logs (Admin)
- * @access  Protected
- */
+// Fetch folder access logs
 router.get(
-  '/logs',
+  "/logs",
   verifyToken,
-  validateRole(['Admin']),
-  logAccessAttempt('logs'),
+  validateRole(["Admin"]),
+  logAccessAttempt("logs"),
   getFolderAccessLogs
 );
 
-/**
- * @route   POST /folders/:taskId/revoke
- * @desc    Revoke folder access (Admin)
- * @access  Protected
- */
+// Revoke folder access
 router.post(
-  '/:taskId/revoke',
+  "/:taskId/revoke",
   verifyToken,
-  validateRole(['Admin']),
-  logDataModification('folders', 'REVOKE_ACCESS'),
+  validateRole(["Admin"]),
+  logDataModification("folders", "REVOKE_ACCESS"),
   revokeFolderAccess
 );
 
-/**
- * @route   POST /folders/:taskId/assign
- * @desc    Assign folder access to a contributor (Admin, ProjectManager)
- * @access  Protected
- */
+// Assign folder access to a contributor
 router.post(
-  '/:taskId/assign',
+  "/:taskId/assign",
   verifyToken,
-  validateRole(['Admin', 'ProjectManager']),
-  logDataModification('folders', 'ASSIGN_ACCESS'),
+  validateRole(["Admin", "ProjectManager"]),
+  logDataModification("folders", "ASSIGN_ACCESS"),
   assignFolderAccess
 );
 
-/**
- * @route   GET /folders/:taskId/check
- * @desc    Check if a contributor has access to a folder (Contributor, Admin)
- * @access  Protected
- */
-router.get('/:taskId/check', verifyToken, logAccessAttempt('folders'), checkFolderAccess);
-
-/**
- * @route   GET /folders/:taskId/preview
- * @desc    Preview folder contents (Contributor, Admin)
- * @access  Protected
- */
-router.get('/:taskId/preview', verifyToken, logAccessAttempt('folders'), previewFolderContents);
-
-/**
- * @route   POST /folders/:taskId/schedule-revocation
- * @desc    Schedule folder access revocation (Admin)
- * @access  Protected
- */
+// Batch assign folder access to multiple contributors
 router.post(
-  '/:taskId/schedule-revocation',
+  "/batch-assign",
   verifyToken,
-  validateRole(['Admin']),
-  logDataModification('folders', 'SCHEDULE_REVOCATION'),
+  validateRole(["Admin"]),
+  validateBatchOperations("folders", "ASSIGN_ACCESS"),
+  logDataModification("folders", "BATCH_ASSIGN_ACCESS"),
+  batchAssignFolderAccess
+);
+
+// Check if a contributor has access to a folder
+router.get(
+  "/:taskId/check",
+  verifyToken,
+  logAccessAttempt("folders"),
+  checkFolderAccess
+);
+
+// Preview folder contents
+router.get(
+  "/:taskId/preview",
+  verifyToken,
+  logAccessAttempt("folders"),
+  previewFolderContents
+);
+
+// Schedule folder access revocation
+router.post(
+  "/:taskId/schedule-revocation",
+  verifyToken,
+  validateRole(["Admin"]),
+  logDataModification("folders", "SCHEDULE_REVOCATION"),
   scheduleFolderAccessRevocation
 );
 
 module.exports = router;
+

@@ -1,212 +1,198 @@
-const Task = require('../models/Task');
-const FolderAccess = require('../models/FolderAccess');
-const Contributor = require('../models/Contributor');
-const { sendFolderAccessNotification } = require('../services/notificationService');
-const logger = require('../utils/logger');
-const fs = require('fs');
-const path = require('path');
+const Contributor = require("../models/Contributor");
+const Task = require("../models/Task");
+const Folder = require("../models/Folder");
 
-// Get the folder path for a specific task (Contributor or Admin only)
-exports.getTaskFolder = async (req, res) => {
-  const { taskId } = req.params;
-  const { id: contributorId, role } = req.user;
+/**
+ * Create a new folder.
+ */
+exports.createFolder = async (req, res) => {
+  const { name, contributorId, parentFolderId } = req.body;
 
   try {
-    const task = await Task.findById(taskId);
+    const contributor = await Contributor.findById(contributorId);
+    if (!contributor) return res.status(404).json({ message: "Contributor not found" });
 
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+    const parentFolder = parentFolderId ? await Folder.findById(parentFolderId) : null;
+    if (parentFolderId && !parentFolder) {
+      return res.status(404).json({ message: "Parent folder not found" });
     }
 
-    // Check if the user is assigned to the task or is an Admin
-    if (role !== 'Admin' && String(task.assignedTo) !== String(contributorId)) {
-      return res.status(403).json({ message: 'Access denied: You are not assigned to this task' });
-    }
-
-    // Log folder access
-    await FolderAccess.create({
-      folderPath: task.folderPath,
-      accessedBy: contributorId,
+    const newFolder = new Folder({
+      name,
+      owner: contributorId,
+      parentFolder: parentFolderId || null,
     });
 
-    // Log the access action
-    logger.info(`Folder accessed by user: ${contributorId} for task: ${taskId}`);
+    await newFolder.save();
 
-    // Notify the contributor
-    if (role === 'Contributor') {
-      const contributor = await Contributor.findById(contributorId);
-      if (contributor) {
-        await sendFolderAccessNotification(contributor.username, task.folderPath);
-      }
-    }
-
-    res.status(200).json({ folderPath: task.folderPath });
+    res.status(201).json({
+      message: "Folder created successfully",
+      folder: {
+        id: newFolder._id,
+        name: newFolder.name,
+        owner: newFolder.owner,
+        parentFolder: parentFolder ? parentFolder.name : null,
+        createdAt: newFolder.createdAt,
+      },
+    });
   } catch (error) {
-    logger.error(`Error in getTaskFolder: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Failed to create folder", error: error.message });
   }
 };
 
-// List all folder accesses with optional filters (Admin only)
-exports.getFolderAccessLogs = async (req, res) => {
-  const { username, folderPath } = req.query; // Optional filters
+/**
+ * Get all folders for a contributor.
+ */
+exports.getContributorFolders = async (req, res) => {
+  const { contributorId } = req.params;
 
   try {
-    const filter = {};
-    if (username) {
-      const contributor = await Contributor.findOne({ username });
-      if (contributor) {
-        filter.accessedBy = contributor._id;
-      }
-    }
-    if (folderPath) filter.folderPath = folderPath;
+    const folders = await Folder.find({ owner: contributorId }).populate("parentFolder");
 
-    const logs = await FolderAccess.find(filter)
-      .populate('accessedBy', 'username role') // Populate contributor details
-      .sort({ accessedAt: -1 }); // Sort by most recent access first
-
-    res.status(200).json(logs);
-  } catch (error) {
-    logger.error(`Error in getFolderAccessLogs: ${error.message}`);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Revoke folder access for a specific task (Admin only)
-exports.revokeFolderAccess = async (req, res) => {
-  const { taskId } = req.params;
-
-  try {
-    const task = await Task.findById(taskId);
-
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+    if (folders.length === 0) {
+      return res.status(404).json({ message: "No folders found for this contributor" });
     }
 
-    // Remove task-assigned contributor
-    task.assignedTo = null;
-    await task.save();
-
-    logger.info(`Folder access revoked for task: ${taskId}`);
-    res.status(200).json({ message: 'Folder access revoked successfully' });
-  } catch (error) {
-    logger.error(`Error in revokeFolderAccess: ${error.message}`);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Assign folder access to a specific contributor for a task (Admin or ProjectManager only)
-exports.assignFolderAccess = async (req, res) => {
-  const { taskId } = req.params;
-  const { contributorId } = req.body;
-
-  try {
-    const task = await Task.findById(taskId);
-    const contributor = await Contributor.findById(contributorId);
-
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-    if (!contributor) return res.status(404).json({ message: 'Contributor not found' });
-
-    // Assign the folder to the contributor
-    task.assignedTo = contributor._id;
-    await task.save();
-
-    // Notify the contributor
-    await sendFolderAccessNotification(contributor.username, task.folderPath);
-
-    logger.info(`Folder access assigned to user: ${contributorId} for task: ${taskId}`);
-    res.status(200).json({ message: 'Folder access assigned successfully', task, contributor });
-  } catch (error) {
-    logger.error(`Error in assignFolderAccess: ${error.message}`);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Check if a contributor has access to a folder
-exports.checkFolderAccess = async (req, res) => {
-  const { taskId } = req.params;
-  const { id: contributorId, role } = req.user;
-
-  try {
-    const task = await Task.findById(taskId);
-
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    const hasAccess = role === 'Admin' || String(task.assignedTo) === String(contributorId);
-
-    res.status(200).json({ hasAccess });
-  } catch (error) {
-    logger.error(`Error in checkFolderAccess: ${error.message}`);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Preview files in a folder (Admin or Assigned Contributor only)
-exports.previewFolderContents = async (req, res) => {
-  const { taskId } = req.params;
-  const { id: contributorId, role } = req.user;
-
-  try {
-    const task = await Task.findById(taskId);
-
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
-
-    // Check access
-    if (role !== 'Admin' && String(task.assignedTo) !== String(contributorId)) {
-      return res.status(403).json({ message: 'Access denied: You are not assigned to this task' });
-    }
-
-    // Get folder path
-    const folderPath = task.folderPath;
-    const folderContents = fs.readdirSync(folderPath).map((file) => ({
-      fileName: file,
-      filePath: path.join(folderPath, file),
+    const formattedFolders = folders.map((folder) => ({
+      id: folder._id,
+      name: folder.name,
+      parentFolder: folder.parentFolder ? folder.parentFolder.name : null,
+      createdAt: folder.createdAt,
     }));
 
-    res.status(200).json({ folderContents });
+    res.status(200).json(formattedFolders);
   } catch (error) {
-    logger.error(`Error in previewFolderContents: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Failed to fetch folders", error: error.message });
   }
 };
 
-// Schedule access revocation for a task folder
-exports.scheduleFolderAccessRevocation = async (req, res) => {
-  const { taskId } = req.params;
-  const { revokeDate } = req.body;
+/**
+ * Get detailed folder information, including tasks and nested folders.
+ */
+exports.getFolderDetails = async (req, res) => {
+  const { folderId } = req.params;
 
   try {
-    const task = await Task.findById(taskId);
+    const folder = await Folder.findById(folderId).populate("parentFolder");
+    if (!folder) return res.status(404).json({ message: "Folder not found" });
 
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
-    }
+    const tasks = await Task.find({ folder: folderId });
+    const nestedFolders = await Folder.find({ parentFolder: folderId });
 
-    // Validate the date
-    const revocationDate = new Date(revokeDate);
-    if (isNaN(revocationDate.getTime())) {
-      return res.status(400).json({ message: 'Invalid revocation date' });
-    }
-
-    // Schedule revocation (Example: Use a cron job or setTimeout)
-    const currentDate = new Date();
-    const delay = revocationDate - currentDate;
-
-    if (delay > 0) {
-      setTimeout(async () => {
-        task.assignedTo = null;
-        await task.save();
-        logger.info(`Folder access revoked for task: ${taskId} on ${revocationDate}`);
-      }, delay);
-    }
-
-    res.status(200).json({ message: `Folder access revocation scheduled for ${revokeDate}` });
+    res.status(200).json({
+      folder: {
+        id: folder._id,
+        name: folder.name,
+        owner: folder.owner,
+        parentFolder: folder.parentFolder ? folder.parentFolder.name : null,
+        createdAt: folder.createdAt,
+      },
+      tasks,
+      nestedFolders,
+    });
   } catch (error) {
-    logger.error(`Error in scheduleFolderAccessRevocation: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Failed to fetch folder details", error: error.message });
+  }
+};
+
+/**
+ * Update folder details (e.g., rename).
+ */
+exports.updateFolder = async (req, res) => {
+  const { folderId } = req.params;
+  const { name } = req.body;
+
+  try {
+    const folder = await Folder.findByIdAndUpdate(folderId, { name }, { new: true });
+    if (!folder) return res.status(404).json({ message: "Folder not found" });
+
+    res.status(200).json({
+      message: "Folder updated successfully",
+      folder: {
+        id: folder._id,
+        name: folder.name,
+        updatedAt: folder.updatedAt,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update folder", error: error.message });
+  }
+};
+
+/**
+ * Delete a folder and optionally its contents.
+ */
+exports.deleteFolder = async (req, res) => {
+  const { folderId } = req.params;
+  const { deleteContents } = req.body; // Boolean flag to delete tasks and nested folders
+
+  try {
+    const folder = await Folder.findById(folderId);
+    if (!folder) return res.status(404).json({ message: "Folder not found" });
+
+    if (deleteContents) {
+      // Delete tasks in the folder
+      await Task.deleteMany({ folder: folderId });
+
+      // Recursively delete nested folders
+      const nestedFolders = await Folder.find({ parentFolder: folderId });
+      for (const nestedFolder of nestedFolders) {
+        await this.deleteFolder({ params: { folderId: nestedFolder._id }, body: { deleteContents: true } }, res);
+      }
+    } else {
+      // Unassign tasks in the folder
+      await Task.updateMany({ folder: folderId }, { $unset: { folder: "" } });
+    }
+
+    await folder.remove();
+    res.status(200).json({ message: "Folder and its contents deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete folder", error: error.message });
+  }
+};
+
+/**
+ * Assign a task to a folder.
+ */
+exports.assignTaskToFolder = async (req, res) => {
+  const { folderId, taskId } = req.body;
+
+  try {
+    const folder = await Folder.findById(folderId);
+    if (!folder) return res.status(404).json({ message: "Folder not found" });
+
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    task.folder = folderId;
+    await task.save();
+
+    res.status(200).json({
+      message: "Task assigned to folder successfully",
+      task: {
+        id: task._id,
+        title: task.title,
+        folder: folder.name,
+        updatedAt: task.updatedAt,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to assign task to folder", error: error.message });
+  }
+};
+
+/**
+ * Organize tasks in a folder by priority, status, or custom criteria.
+ */
+exports.organizeTasksInFolder = async (req, res) => {
+  const { folderId } = req.params;
+  const { sortBy = "status" } = req.query; // Default to sorting by status
+
+  try {
+    const tasks = await Task.find({ folder: folderId }).sort({ [sortBy]: 1 });
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to organize tasks", error: error.message });
   }
 };

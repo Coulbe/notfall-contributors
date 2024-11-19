@@ -1,170 +1,84 @@
-const Contributor = require('../models/Contributor');
-const logger = require('../utils/logger');
-const auditService = require('../services/auditService'); // Example service for auditing
+const logger = require("../utils/logger");
 
-// Permissions configuration with default fallback
-const permissions = {
-  Admin: {
-    allowed: ['all'], // Admin has unrestricted access
-    restricted: [],   // No restrictions for Admin
-  },
-  ProjectManager: {
-    allowed: ['tasks', 'contributors', 'folders', 'reports'],
-    restricted: ['settings'], // Cannot access system settings
-  },
-  Contributor: {
-    allowed: ['assignedTasks', 'assignedFolders'],
-    restricted: ['reports', 'settings'],
-  },
+// Define a role hierarchy for access control
+const roleHierarchy = {
+  Admin: ["Admin", "ProjectManager", "Contributor"],
+  ProjectManager: ["ProjectManager", "Contributor"],
+  Contributor: ["Contributor"],
 };
 
-// Default role permissions
-const defaultRole = 'Contributor';
-
 /**
- * Validate if the user has one of the allowed roles
- * @param {Array} allowedRoles - Roles allowed to access the resource
+ * Middleware to validate roles dynamically based on role hierarchy.
+ * @param {Array} allowedRoles - Array of roles allowed to access the resource.
  */
-exports.validateRole = (allowedRoles) => (req, res, next) => {
-  const { role } = req.user;
+const validateRole = (allowedRoles) => (req, res, next) => {
+  const userRole = req.user?.roles[0]; // Assume the user has a roles array
 
-  if (!allowedRoles.includes(role)) {
-    logger.warn(`Access denied for user: ${req.user.username}, Role: ${role}, Allowed Roles: ${allowedRoles}`);
-    auditService.logAccess(req.user.username, role, 'Role validation failed', req.originalUrl, false);
-    return res.status(403).json({ message: `Access denied: Role '${role}' is not permitted for this action` });
+  if (!userRole || !allowedRoles.includes(userRole)) {
+    logger.warn(`Access denied: User role '${userRole}' is not in allowed roles [${allowedRoles}]`);
+    return res.status(403).json({ message: `Access denied: Role '${userRole}' is not permitted` });
   }
 
-  logger.info(`Role validation passed for user: ${req.user.username}, Role: ${role}`);
-  auditService.logAccess(req.user.username, role, 'Role validation succeeded', req.originalUrl, true);
+  logger.info(`Role validation passed for user: ${req.user.username}, Role: ${userRole}`);
   next();
 };
 
 /**
- * Check if the user has permission to access a specific resource
- * @param {string} resource - The resource to validate access for
+ * Middleware to check permissions for specific actions.
+ * @param {String} requiredPermission - Permission required to access the resource.
  */
-exports.checkPermissions = (resource) => (req, res, next) => {
-  const { role } = req.user;
-  const rolePermissions = permissions[role] || permissions[defaultRole];
+const checkPermissions = (requiredPermission) => (req, res, next) => {
+  const userPermissions = req.user?.permissions || []; // Assume permissions are part of the user object
 
-  // Allow access if role has 'all' access or resource is explicitly allowed
-  if (
-    rolePermissions.allowed.includes('all') ||
-    rolePermissions.allowed.includes(resource) ||
-    rolePermissions.allowed.some((r) => resource.startsWith(r)) // Wildcard match (e.g., "tasks/*")
-  ) {
-    logger.info(`Permission granted for user: ${req.user.username}, Role: ${role}, Resource: ${resource}`);
-    auditService.logAccess(req.user.username, role, `Permission granted for ${resource}`, req.originalUrl, true);
-    return next();
+  if (!userPermissions.includes(requiredPermission)) {
+    logger.warn(`Access denied: User lacks required permission '${requiredPermission}'`);
+    return res.status(403).json({ message: `Access denied: Permission '${requiredPermission}' is required` });
   }
 
-  // Deny access if explicitly restricted
-  if (rolePermissions.restricted?.includes(resource)) {
-    logger.warn(`Access denied for user: ${req.user.username}, Role: ${role}, Resource: ${resource}`);
-    auditService.logAccess(req.user.username, role, `Permission denied for ${resource}`, req.originalUrl, false);
-    return res.status(403).json({ message: `Access denied: Role '${role}' cannot access '${resource}'` });
-  }
-
-  // Default deny
-  logger.warn(`Access denied by default for user: ${req.user.username}, Role: ${role}, Resource: ${resource}`);
-  auditService.logAccess(req.user.username, role, `Default permission denied for ${resource}`, req.originalUrl, false);
-  res.status(403).json({ message: `Access denied: Role '${role}' cannot access '${resource}'` });
-};
-
-/**
- * Validate hierarchical roles based on precedence
- * @param {string} requiredRole - The minimum role required for access
- */
-exports.validateHierarchicalRole = (requiredRole) => (req, res, next) => {
-  const { role } = req.user;
-  const roleHierarchy = ['Contributor', 'ProjectManager', 'Admin'];
-
-  // Check if user's role meets or exceeds required role level
-  if (roleHierarchy.indexOf(role) < roleHierarchy.indexOf(requiredRole)) {
-    logger.warn(`Access denied: Insufficient role level for user: ${req.user.username}, Role: ${role}, Required: ${requiredRole}`);
-    auditService.logAccess(req.user.username, role, `Insufficient role level for ${requiredRole}`, req.originalUrl, false);
-    return res.status(403).json({ message: `Access denied: Insufficient role level for '${requiredRole}'` });
-  }
-
-  logger.info(`Hierarchical role validation passed for user: ${req.user.username}, Role: ${role}`);
+  logger.info(`Permission validation passed for user: ${req.user.username}, Permission: ${requiredPermission}`);
   next();
 };
 
 /**
- * Assign or update a user's role dynamically
- * @param {string} userId - The ID of the user to update
- * @param {string} newRole - The new role to assign
+ * Middleware to validate access using a role hierarchy.
+ * Automatically grants access if the user's role is higher or equal in the hierarchy.
+ * @param {String} requiredRole - Minimum role required to access the resource.
  */
-exports.updateRole = async (req, res) => {
-  const { userId, newRole } = req.body;
+const validateRoleHierarchy = (requiredRole) => (req, res, next) => {
+  const userRole = req.user?.roles[0];
 
-  try {
-    const contributor = await Contributor.findById(userId);
-
-    if (!contributor) {
-      logger.warn(`Role update failed: User not found (ID: ${userId})`);
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Validate the new role
-    if (!permissions[newRole]) {
-      logger.warn(`Role update failed: Invalid role '${newRole}'`);
-      return res.status(400).json({ message: `Invalid role: '${newRole}'` });
-    }
-
-    contributor.role = newRole;
-    await contributor.save();
-
-    logger.info(`Role updated successfully for user: ${contributor.username}, New Role: ${newRole}`);
-    auditService.logRoleUpdate(req.user.username, contributor.username, newRole);
-    res.status(200).json({ message: `Role updated successfully to '${newRole}'` });
-  } catch (error) {
-    logger.error(`Error updating role: ${error.message}`);
-    res.status(500).json({ message: error.message });
+  if (!userRole || !roleHierarchy[requiredRole]?.includes(userRole)) {
+    logger.warn(`Access denied: User role '${userRole}' does not meet the required role '${requiredRole}'`);
+    return res.status(403).json({ message: `Access denied: Minimum role '${requiredRole}' is required` });
   }
+
+  logger.info(`Role hierarchy validation passed for user: ${req.user.username}, Role: ${userRole}`);
+  next();
 };
 
 /**
- * Apply a temporary role to a user
- * @param {string} userId - The ID of the user
- * @param {string} tempRole - The temporary role to assign
- * @param {Date} duration - Duration after which the role will be revoked
+ * Middleware to handle multi-role users and validate against multiple allowed roles.
+ * @param {Array} allowedRoles - Array of roles allowed to access the resource.
  */
-exports.assignTemporaryRole = async (req, res) => {
-  const { userId, tempRole, duration } = req.body;
+const validateMultiRoles = (allowedRoles) => (req, res, next) => {
+  const userRoles = req.user?.roles || []; // User can have multiple roles
 
-  try {
-    const contributor = await Contributor.findById(userId);
+  const hasValidRole = userRoles.some((role) => allowedRoles.includes(role));
 
-    if (!contributor) {
-      logger.warn(`Temporary role assignment failed: User not found (ID: ${userId})`);
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Validate the temporary role
-    if (!permissions[tempRole]) {
-      logger.warn(`Temporary role assignment failed: Invalid role '${tempRole}'`);
-      return res.status(400).json({ message: `Invalid role: '${tempRole}'` });
-    }
-
-    // Assign the temporary role and set a timer to revert it
-    const originalRole = contributor.role;
-    contributor.role = tempRole;
-    await contributor.save();
-
-    logger.info(`Temporary role '${tempRole}' assigned to user: ${contributor.username} for duration: ${duration}ms`);
-    auditService.logRoleUpdate(req.user.username, contributor.username, tempRole, 'Temporary Role Assigned');
-
-    setTimeout(async () => {
-      contributor.role = originalRole;
-      await contributor.save();
-      logger.info(`Temporary role '${tempRole}' reverted to original role '${originalRole}' for user: ${contributor.username}`);
-      auditService.logRoleUpdate(req.user.username, contributor.username, originalRole, 'Temporary Role Reverted');
-    }, duration);
-
-    res.status(200).json({ message: `Temporary role '${tempRole}' assigned successfully for ${duration}ms` });
-  } catch (error) {
-    logger.error(`Error assigning temporary role: ${error.message}`);
-    res.status(500).json({ message: error.message });
+  if (!hasValidRole) {
+    logger.warn(
+      `Access denied: User roles '${userRoles}' do not match any allowed roles [${allowedRoles}]`
+    );
+    return res.status(403).json({ message: `Access denied: Role not permitted` });
   }
+
+  logger.info(`Multi-role validation passed for user: ${req.user.username}, Roles: ${userRoles}`);
+  next();
+};
+
+module.exports = {
+  validateRole,
+  checkPermissions,
+  validateRoleHierarchy,
+  validateMultiRoles,
 };

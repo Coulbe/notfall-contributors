@@ -1,4 +1,10 @@
-module.exports = [
+/**
+ * templates/authenticationTasks.js
+ * This file contains predefined tasks for the authentication module of the Notfall Engineers platform.
+ * These tasks include API development, frontend form creation, and security features like 2FA and auditing.
+ */
+
+const authenticationTasks = [
   {
     title: "Develop Login API",
     description: "Build a secure API for user authentication using JWT tokens. Ensure the API adheres to best security practices, including hashing and token expiration.",
@@ -89,3 +95,7 @@ module.exports = [
     status: "Unassigned",
   },
 ];
+
+// Export the tasks for integration into the task seeds
+module.exports = authenticationTasks;
+

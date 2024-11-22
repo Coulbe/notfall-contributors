@@ -1,4 +1,4 @@
-docs/# Task Assignment Guide
+# Task Assignment Guide
 
 This document provides a comprehensive guide on how tasks are created, assigned, and tracked within the **Notfall Contributors System**.
 

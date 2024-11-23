@@ -1,38 +1,9 @@
 const mongoose = require("mongoose");
 
-const taskSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Contributor" },
-    folderId: { type: mongoose.Schema.Types.ObjectId, ref: "Folder" },
-    status: { type: String, enum: ["Pending", "In Progress", "Completed"], default: "Pending" },
-    priority: { type: String, enum: ["Low", "Medium", "High"], default: "Medium" },
-    dueDate: { type: Date },
-  },
-  { timestamps: true }
-);
-
-// Method to update task status
-taskSchema.methods.updateStatus = function (status) {
-  this.status = status;
-  return this.save();
-};
-
-// Static method to find tasks by status
-taskSchema.statics.findByStatus = function (status) {
-  return this.find({ status });
-};
-
-module.exports = mongoose.model("Task", taskSchema);
-
 /**
- * models/Task.js
- * MongoDB schema for managing tasks in the Notfall Contributors system.
+ * Task Schema
+ * A unified schema for managing tasks for both engineers and contributors in the Notfall system.
  */
-
-const mongoose = require("mongoose");
-
 const taskSchema = new mongoose.Schema(
   {
     title: {
@@ -45,12 +16,24 @@ const taskSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["Backend Developer", "Frontend Developer", "Full-Stack Developer", "Blockchain Developer", "DevOps Engineer", "Admin"],
+      enum: [
+        "Engineer",
+        "Backend Developer",
+        "Frontend Developer",
+        "Full-Stack Developer",
+        "Blockchain Developer",
+        "DevOps Engineer",
+        "Admin",
+      ],
       required: [true, "Task role is required"],
     },
+    requiredSkills: {
+      type: [String], // Skills required for the task
+      required: [true, "Required skills are required"],
+    },
     folderAccess: {
-      type: [String], // Array of folder/file paths accessible for this task
-      required: [true, "Folder access paths are required"],
+      type: [String], // Folder/file paths accessible for this task
+      default: [],
     },
     tags: {
       type: [String], // Keywords for task categorization
@@ -68,12 +51,17 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Unassigned", "In Progress", "Completed", "Archived"],
+      enum: ["Unassigned", "Pending", "In Progress", "Completed", "Rejected", "Archived"],
       default: "Unassigned",
     },
+    roleReference: {
+      type: String,
+      enum: ["Contributor", "Engineer"],
+      required: [true, "Role reference is required"],
+    },
     assignedTo: {
-      type: mongoose.Schema.Types.ObjectId, // Reference to the Contributor assigned to this task
-      ref: "Contributor",
+      type: mongoose.Schema.Types.ObjectId, // Reference to the assigned user
+      refPath: "roleReference", // Dynamically reference either Contributor or Engineer
       default: null,
     },
     createdBy: {
@@ -81,13 +69,28 @@ const taskSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: undefined, // Only applicable for engineer tasks
+      },
+    },
+    hourlyRate: {
+      type: Number, // Applicable for engineer tasks
+      default: null,
+    },
     dueDate: {
-      type: Date,
-      default: null, // Optional deadline for the task
+      type: Date, // Optional deadline for the task
+      default: null,
     },
     completionDate: {
-      type: Date,
-      default: null, // Date when the task was completed
+      type: Date, // Date when the task was completed
+      default: null,
     },
     auditLogs: [
       {
@@ -102,7 +105,9 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
-// Middleware to add default audit log when a task is created
+/**
+ * Middleware to add default audit log when a task is created.
+ */
 taskSchema.pre("save", function (next) {
   if (this.isNew) {
     this.auditLogs.push({
@@ -113,12 +118,43 @@ taskSchema.pre("save", function (next) {
   next();
 });
 
-// Static method to fetch tasks by role
+/**
+ * Method to update task status and log the event.
+ * @param {String} status - New status for the task.
+ * @param {ObjectId} userId - User making the update.
+ * @returns {Promise} - Updated task.
+ */
+taskSchema.methods.updateStatus = async function (status, userId) {
+  this.status = status;
+  this.auditLogs.push({
+    event: `Status updated to '${status}'`,
+    performedBy: userId,
+  });
+  return this.save();
+};
+
+/**
+ * Static method to find tasks by role.
+ * @param {String} role - Role (e.g., "Engineer", "Contributor").
+ * @returns {Promise} - List of tasks for the specified role.
+ */
 taskSchema.statics.findByRole = async function (role) {
   return await this.find({ role });
 };
 
-// Virtual field to calculate the time remaining for a task
+/**
+ * Static method to find tasks by status.
+ * @param {String} status - Task status (e.g., "Pending", "Completed").
+ * @returns {Promise} - List of tasks with the specified status.
+ */
+taskSchema.statics.findByStatus = async function (status) {
+  return await this.find({ status });
+};
+
+/**
+ * Virtual field to calculate the time remaining for a task.
+ * @returns {Number | null} - Time remaining in milliseconds or null if no dueDate.
+ */
 taskSchema.virtual("timeRemaining").get(function () {
   if (!this.dueDate) return null;
   const now = new Date();
@@ -126,4 +162,5 @@ taskSchema.virtual("timeRemaining").get(function () {
 });
 
 module.exports = mongoose.model("Task", taskSchema);
+
 

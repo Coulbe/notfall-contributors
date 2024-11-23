@@ -1,149 +1,191 @@
-const Task = require("../models/Task");
-const Contributor = require("../models/Contributor");
-const NotificationService = require("./notificationService");
+const AIModel = require("../services/aiModel"); // Import AI prediction model
+const { calculateDistance, calculateSkillsMatch } = require("../utils/scoringUtils"); // Scoring utilities
+const { sendNotification } = require("../services/notificationService"); // Notification service
+const EngineerModel = require("../models/Engineer"); // Engineer schema
+const ContributorModel = require("../models/Contributor"); // Contributor schema
+const TaskModel = require("../models/Task"); // Task schema
 const logger = require("../utils/logger");
-const { calculateDistance, calculateSkillsMatch } = require("../utils/scoringUtils");
 
 /**
- * Match tasks to contributors dynamically.
+ * Match a task to the best candidates (engineers or contributors) using filtering and scoring.
+ * @param {Object} task - Task details containing description, location, skills, etc.
+ * @param {String} role - Role type (e.g., "engineer" or "contributor").
+ * @returns {Array} - List of top matching candidates.
  */
-const matchTasksToContributors = async () => {
+async function matchTaskToCandidates(task, role) {
   try {
-    logger.info("Starting task matching process...");
+    logger.info(`Matching task '${task.title}' to ${role}s...`);
 
-    // Step 1: Fetch all unassigned tasks
-    const unassignedTasks = await Task.find({ status: "Unassigned" });
-    if (!unassignedTasks.length) {
-      logger.info("No unassigned tasks found.");
-      return;
+    const Model = role === "engineer" ? EngineerModel : ContributorModel;
+
+    // Step 1: Filter candidates based on basic requirements
+    let candidates = await Model.find({
+      skills: { $in: task.requiredSkills },
+      ...(role === "engineer" && {
+        location: {
+          $near: {
+            $geometry: { type: "Point", coordinates: [task.longitude, task.latitude] },
+            $maxDistance: 10000, // 10 km radius
+          },
+        },
+        hourlyRate: { $lte: task.hourlyRate },
+      }),
+      availability: role === "engineer" ? task.date : true, // Engineers have time-based availability
+    });
+
+    if (!candidates.length) {
+      logger.warn(`No ${role}s found for task '${task.title}'.`);
+      return [];
     }
 
-    // Step 2: Fetch all active contributors
-    const contributors = await Contributor.find({ status: "Active" });
-    if (!contributors.length) {
-      logger.warn("No active contributors found.");
-      return;
-    }
+    // Step 2: Score candidates
+    candidates = candidates.map((candidate) => {
+      const features = {
+        proximity: role === "engineer" ? calculateDistance(task, candidate.location) : null,
+        hourlyRateCompatibility:
+          role === "engineer" && task.hourlyRate ? task.hourlyRate - candidate.hourlyRate : null,
+        skillsMatch: calculateSkillsMatch(task.requiredSkills, candidate.skills),
+        workload: role === "contributor" ? candidate.currentWorkload : null,
+        expertiseMatch: role === "contributor" ? calculateExpertiseMatch(candidate, task) : null,
+        userRating: candidate.userRating || 0,
+        successRate: candidate.successRate || 0,
+        urgency: task.urgency === "High" ? 1 : 0,
+      };
 
-    // Step 3: Process each task for assignment
-    for (const task of unassignedTasks) {
-      const rankedContributors = rankContributors(task, contributors);
+      candidate.matchScore = AIModel.predict(features);
+      return candidate;
+    });
 
-      if (!rankedContributors.length) {
-        logger.warn(`No suitable contributors found for task: ${task.title}`);
-        continue;
-      }
+    // Step 3: Sort candidates by match score in descending order
+    candidates.sort((a, b) => b.matchScore - a.matchScore);
 
-      // Assign task to the top-ranked contributor
-      const topContributor = rankedContributors[0];
-      await assignTask(task, topContributor);
-    }
+    // Step 4: Return the top 5 candidates
+    return candidates.slice(0, 5);
   } catch (error) {
-    logger.error("Error during task matching:", error);
+    logger.error(`Error matching task '${task.title}':`, error);
+    throw new Error("Task matching failed. Please try again later.");
   }
-};
+}
 
 /**
- * Assign a task to a contributor.
+ * Assign a task to the best-matched candidate.
  * @param {Object} task - Task object.
- * @param {Object} contributor - Contributor object.
+ * @param {Object} candidate - The best-matched candidate (engineer or contributor).
  */
-const assignTask = async (task, contributor) => {
+async function assignTaskToCandidate(task, candidate) {
   try {
-    task.assignedTo = contributor._id;
+    task.assignedTo = candidate._id;
     task.status = "Awaiting Response";
     await task.save();
 
-    // Notify the contributor
-    await NotificationService.sendNotification(
-      contributor._id,
+    // Notify the candidate
+    await sendNotification(
+      candidate._id,
       `You have been assigned a new task: ${task.title}. Please accept or reject it from your dashboard.`
     );
 
-    logger.info(`Task '${task.title}' assigned to contributor: ${contributor.username}`);
+    logger.info(`Task '${task.title}' assigned to ${candidate.username}.`);
   } catch (error) {
-    logger.error(`Error assigning task '${task.title}':`, error);
+    logger.error(`Error assigning task '${task.title}' to ${candidate.username}:`, error);
   }
-};
+}
 
 /**
  * Handle task acceptance or rejection.
  * @param {Object} task - Task object.
- * @param {String} response - "accept" or "reject"
- * @param {Object} contributor - Contributor object
+ * @param {String} response - "accept" or "reject".
+ * @param {Object} candidate - The candidate responding to the task.
  */
-const handleTaskResponse = async (task, response, contributor) => {
+async function handleTaskResponse(task, response, candidate) {
   try {
     if (response === "accept") {
       task.status = "In Progress";
       await task.save();
 
-      logger.info(`Task '${task.title}' accepted by ${contributor.username}.`);
-      await NotificationService.sendNotification(
-        contributor._id,
+      await sendNotification(
+        candidate._id,
         `You have successfully accepted the task: ${task.title}. Start working on it now!`
       );
+      logger.info(`Task '${task.title}' accepted by ${candidate.username}.`);
     } else if (response === "reject") {
       task.assignedTo = null;
       task.status = "Unassigned";
       await task.save();
 
-      logger.warn(`Task '${task.title}' rejected by ${contributor.username}.`);
+      logger.warn(`Task '${task.title}' rejected by ${candidate.username}.`);
       await reassignTask(task);
     }
   } catch (error) {
-    logger.error("Error handling task response:", error);
+    logger.error(`Error handling task response for task '${task.title}':`, error);
   }
-};
+}
 
 /**
- * Reassign a task to the next best contributor.
+ * Reassign a task to the next best candidate.
  * @param {Object} task - Task object.
  */
-const reassignTask = async (task) => {
+async function reassignTask(task) {
   try {
-    const contributors = await Contributor.find({ status: "Active" });
-    const rankedContributors = rankContributors(task, contributors);
+    const topCandidates = await matchTaskToCandidates(task, task.role);
 
-    if (rankedContributors.length) {
-      await assignTask(task, rankedContributors[0]);
+    if (topCandidates.length) {
+      await assignTaskToCandidate(task, topCandidates[0]);
     } else {
-      logger.warn(`No suitable contributors found to reassign task: ${task.title}`);
-      await NotificationService.sendNotification(
+      logger.warn(`No suitable candidates found to reassign task '${task.title}'.`);
+      await sendNotification(
         "admin",
         `Task '${task.title}' could not be reassigned. Please review manually.`
       );
     }
   } catch (error) {
-    logger.error("Error reassigning task:", error);
+    logger.error(`Error reassigning task '${task.title}':`, error);
   }
-};
+}
 
 /**
- * Rank contributors based on workload, expertise, and proximity.
- * @param {Object} task - The task to be assigned.
- * @param {Array} contributors - List of eligible contributors.
- * @returns {Array} - Ranked contributors.
+ * Main function to handle task assignment for engineers or contributors.
+ * @param {String} role - Role type ("engineer" or "contributor").
  */
-const rankContributors = (task, contributors) => {
-  return contributors
-    .map((contributor) => ({
-      ...contributor.toObject(),
-      workload: contributor.currentWorkload || 0,
-      expertiseMatch: calculateSkillsMatch(contributor.skills, task.requiredSkills),
-      distance: calculateDistance(task.location, contributor.location),
-    }))
-    .sort((a, b) => {
-      // Rank by workload (lower is better), expertise match (higher is better), and distance (shorter is better)
-      if (a.workload !== b.workload) return a.workload - b.workload;
-      if (a.expertiseMatch !== b.expertiseMatch) return b.expertiseMatch - a.expertiseMatch;
-      return a.distance - b.distance;
-    });
+async function matchAndAssignTasks(role) {
+  try {
+    logger.info(`Starting task matching process for ${role}s...`);
+
+    const unassignedTasks = await TaskModel.find({ status: "Unassigned" });
+
+    if (!unassignedTasks.length) {
+      logger.info("No unassigned tasks found.");
+      return;
+    }
+
+    for (const task of unassignedTasks) {
+      const topCandidates = await matchTaskToCandidates(task, role);
+
+      if (!topCandidates.length) {
+        logger.warn(`No suitable ${role}s found for task '${task.title}'.`);
+        continue;
+      }
+
+      await assignTaskToCandidate(task, topCandidates[0]);
+    }
+  } catch (error) {
+    logger.error("Error during task matching and assignment:", error);
+  }
+}
+
+/**
+ * Calculate expertise match score for a contributor.
+ * @param {Object} contributor - Contributor object.
+ * @param {Object} task - Task object.
+ * @returns {Number} - Expertise match score.
+ */
+const calculateExpertiseMatch = (contributor, task) => {
+  const matchingTags = contributor.skills.filter((skill) => task.tags.includes(skill));
+  return matchingTags.length / task.tags.length;
 };
 
 module.exports = {
-  matchTasksToContributors,
-  assignTask,
+  matchTaskToCandidates,
+  assignTaskToCandidate,
   handleTaskResponse,
+  matchAndAssignTasks,
 };
-

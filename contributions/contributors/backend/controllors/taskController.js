@@ -1,158 +1,214 @@
-const Task = require('../models/Task');
-const Contributor = require('../models/Contributor');
+const Task = require("../models/Task");
+const User = require("../models/User");
+const NotificationService = require("../services/notificationService");
+const logger = require("../utils/logger");
 
-// Get all tasks (Admin or Project Manager only)
-exports.getAllTasks = async (req, res) => {
+/**
+ * Get tasks assigned to an engineer.
+ */
+exports.getAssignedTasksForEngineer = async (req, res) => {
   try {
-    const tasks = await Task.find()
-      .populate('assignedTo', 'username role') // Populate contributor details
-      .select('-__v'); // Exclude version key
-    res.status(200).json(tasks);
+    if (req.user.role !== "Engineer") {
+      return res.status(403).json({ message: "Access denied: Only engineers can view tasks." });
+    }
+
+    const tasks = await Task.find({ assignedTo: req.user.id })
+      .select("-__v")
+      .sort({ dueDate: 1 }); // Sort by earliest due date
+
+    res.status(200).json({ tasks });
   } catch (error) {
+    logger.error("Error fetching assigned tasks for engineer:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get a single task by ID
-exports.getTaskById = async (req, res) => {
+/**
+ * Accept a task (Engineer only).
+ */
+exports.acceptTask = async (req, res) => {
   const { taskId } = req.params;
 
   try {
-    const task = await Task.findById(taskId)
-      .populate('assignedTo', 'username role') // Populate contributor details
-      .populate('dependencies', 'title status'); // Populate dependent tasks
+    const task = await Task.findById(taskId);
 
-    if (!task) return res.status(404).json({ message: 'Task not found' });
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    res.status(200).json(task);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+    if (task.status !== "Pending") {
+      return res.status(400).json({ message: "Task is no longer available for acceptance." });
+    }
 
-// Create a new task (Admin or Project Manager only)
-exports.createTask = async (req, res) => {
-  const { title, description, folderPath, priority, dependencies } = req.body;
+    if (task.assignedTo && String(task.assignedTo) !== String(req.user.id)) {
+      return res.status(400).json({ message: "Task is assigned to another engineer." });
+    }
 
-  try {
-    const newTask = await Task.create({
-      title,
-      description,
-      folderPath,
-      priority,
-      dependencies,
+    task.status = "In Progress";
+    task.assignedTo = req.user.id;
+    task.auditLogs.push({
+      event: "Task accepted",
+      performedBy: req.user.id,
     });
 
-    res.status(201).json(newTask);
+    await task.save();
+
+    await NotificationService.sendNotification(
+      "admin",
+      `Engineer ${req.user.username} accepted task: ${task.title}.`
+    );
+
+    logger.info(`Task '${task.title}' accepted by engineer ${req.user.username}`);
+    res.status(200).json({ message: "Task accepted successfully.", task });
   } catch (error) {
+    logger.error("Error accepting task:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// Update task details (Admin or Project Manager only)
-exports.updateTask = async (req, res) => {
+/**
+ * Reject a task (Engineer only).
+ */
+exports.rejectTask = async (req, res) => {
   const { taskId } = req.params;
-  const updates = req.body;
-
-  try {
-    const task = await Task.findByIdAndUpdate(taskId, updates, { new: true });
-
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    res.status(200).json(task);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Update task status (Contributor, Admin, or Project Manager)
-exports.updateTaskStatus = async (req, res) => {
-  const { taskId } = req.params;
-  const { status } = req.body;
-
-  if (!['Pending', 'In Progress', 'Completed'].includes(status)) {
-    return res.status(400).json({ message: 'Invalid status' });
-  }
+  const { reason } = req.body;
 
   try {
     const task = await Task.findById(taskId);
 
-    if (!task) return res.status(404).json({ message: 'Task not found' });
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Ensure only assigned contributors, admins, or project managers can update status
-    if (
-      req.user.role !== 'Admin' &&
-      req.user.role !== 'ProjectManager' &&
-      String(task.assignedTo) !== String(req.user.id)
-    ) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (task.status !== "Pending") {
+      return res.status(400).json({ message: "Task is no longer available for rejection." });
     }
 
-    task.status = status;
+    task.status = "Rejected";
+    task.auditLogs.push({
+      event: `Task rejected with reason: ${reason}`,
+      performedBy: req.user.id,
+    });
+
     await task.save();
 
-    res.status(200).json({ message: `Task status updated to ${status}`, task });
+    await NotificationService.sendNotification(
+      "admin",
+      `Engineer ${req.user.username} rejected task: ${task.title}. Reason: ${reason}`
+    );
+
+    logger.info(`Task '${task.title}' rejected by engineer ${req.user.username}`);
+    res.status(200).json({ message: "Task rejected successfully.", task });
+
+    // Optionally reassign the task
+    await reassignTask(task);
   } catch (error) {
+    logger.error("Error rejecting task:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// Delete a task (Admin only)
-exports.deleteTask = async (req, res) => {
+/**
+ * Mark a task as completed (Engineer only).
+ */
+exports.completeTask = async (req, res) => {
   const { taskId } = req.params;
-
-  try {
-    const task = await Task.findByIdAndDelete(taskId);
-
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    res.status(200).json({ message: 'Task deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Assign a task to a contributor (Admin or Project Manager only)
-exports.assignTaskToContributor = async (req, res) => {
-  const { taskId } = req.params;
-  const { contributorId } = req.body;
 
   try {
     const task = await Task.findById(taskId);
-    const contributor = await Contributor.findById(contributorId);
 
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-    if (!contributor) return res.status(404).json({ message: 'Contributor not found' });
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Ensure the task is not already assigned
-    if (task.assignedTo && String(task.assignedTo) !== String(contributor._id)) {
-      return res.status(400).json({ message: 'Task is already assigned to another contributor' });
+    if (task.assignedTo.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ message: "Access denied: This task is not assigned to you." });
     }
 
-    task.assignedTo = contributor._id;
+    if (task.status !== "In Progress") {
+      return res.status(400).json({ message: "Only tasks in progress can be marked as completed." });
+    }
+
+    task.status = "Completed";
+    task.completionDate = new Date();
+    task.auditLogs.push({
+      event: "Task completed",
+      performedBy: req.user.id,
+    });
+
     await task.save();
 
-    // Update contributor's task list
-    if (!contributor.tasks.includes(task._id)) {
-      contributor.tasks.push(task._id);
-      await contributor.save();
-    }
+    await NotificationService.sendNotification(
+      "admin",
+      `Engineer ${req.user.username} completed task: ${task.title}.`
+    );
 
-    res.status(200).json({ message: 'Task assigned successfully', task, contributor });
+    logger.info(`Task '${task.title}' completed by engineer ${req.user.username}`);
+    res.status(200).json({ message: "Task marked as completed.", task });
   } catch (error) {
+    logger.error("Error marking task as completed:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get tasks assigned to the logged-in contributor
-exports.getMyTasks = async (req, res) => {
-  try {
-    const tasks = await Task.find({ assignedTo: req.user.id })
-      .populate('dependencies', 'title status') // Populate dependent tasks
-      .select('-__v'); // Exclude version key
+/**
+ * Update task progress (Engineer only).
+ */
+exports.updateTaskProgress = async (req, res) => {
+  const { taskId } = req.params;
+  const { progressDetails } = req.body;
 
-    res.status(200).json(tasks);
+  try {
+    const task = await Task.findById(taskId);
+
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    if (task.assignedTo.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ message: "Access denied: This task is not assigned to you." });
+    }
+
+    if (task.status !== "In Progress") {
+      return res.status(400).json({ message: "Progress updates can only be made for tasks in progress." });
+    }
+
+    task.auditLogs.push({
+      event: `Task progress updated: ${progressDetails}`,
+      performedBy: req.user.id,
+    });
+
+    await task.save();
+
+    logger.info(`Task '${task.title}' progress updated by engineer ${req.user.username}`);
+    res.status(200).json({ message: "Task progress updated successfully.", task });
   } catch (error) {
+    logger.error("Error updating task progress:", error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Reassign a rejected task.
+ */
+const reassignTask = async (task) => {
+  try {
+    const eligibleEngineers = await User.find({
+      role: "Engineer",
+      skills: { $in: task.requiredSkills },
+      _id: { $ne: task.assignedTo }, // Exclude the rejecting engineer
+    });
+
+    if (!eligibleEngineers.length) {
+      logger.warn(`No engineers available for reassignment of task: ${task.title}`);
+      return;
+    }
+
+    const nextEngineer = eligibleEngineers[0]; // Replace with scoring logic if required
+    task.assignedTo = nextEngineer._id;
+    task.status = "Pending";
+
+    await task.save();
+
+    await NotificationService.sendNotification(
+      nextEngineer._id,
+      `You have been reassigned the task: ${task.title}.`
+    );
+
+    logger.info(`Task '${task.title}' reassigned to engineer ${nextEngineer.username}`);
+  } catch (error) {
+    logger.error("Error reassigning task:", error);
   }
 };

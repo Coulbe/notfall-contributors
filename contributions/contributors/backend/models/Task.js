@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 /**
  * Task Schema
- * A unified schema for managing tasks for both engineers and contributors in the Notfall system.
+ * A unified schema for managing tasks across engineers, contributors, and tenants in the Notfall system.
  */
 const taskSchema = new mongoose.Schema(
   {
@@ -24,12 +24,14 @@ const taskSchema = new mongoose.Schema(
         "Blockchain Developer",
         "DevOps Engineer",
         "Admin",
+        "Tenant",
+        "Property Manager",
       ],
       required: [true, "Task role is required"],
     },
     requiredSkills: {
       type: [String], // Skills required for the task
-      required: [true, "Required skills are required"],
+      default: [],
     },
     folderAccess: {
       type: [String], // Folder/file paths accessible for this task
@@ -41,7 +43,7 @@ const taskSchema = new mongoose.Schema(
     },
     reward: {
       type: Number, // Number of Notcoins or points rewarded for this task
-      required: [true, "Task reward is required"],
+      default: 0,
       min: [0, "Reward must be a positive number"],
     },
     priority: {
@@ -51,22 +53,35 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Unassigned", "Pending", "In Progress", "Completed", "Rejected", "Archived"],
+      enum: [
+        "Unassigned",
+        "Pending Approval",
+        "Approved",
+        "In Progress",
+        "Completed",
+        "Rejected",
+        "Archived",
+      ],
       default: "Unassigned",
     },
     roleReference: {
       type: String,
-      enum: ["Contributor", "Engineer"],
+      enum: ["Contributor", "Engineer", "User"], // Reference entity
       required: [true, "Role reference is required"],
     },
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId, // Reference to the assigned user
-      refPath: "roleReference", // Dynamically reference either Contributor or Engineer
+    raisedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // User who raised the task (e.g., Tenant)
       default: null,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId, // Reference to the Admin or system creating the task
-      ref: "User",
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Property Manager who approved the task
+      default: null,
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId, // Reference to the assigned entity
+      refPath: "roleReference",
       default: null,
     },
     location: {
@@ -92,6 +107,10 @@ const taskSchema = new mongoose.Schema(
       type: Date, // Date when the task was completed
       default: null,
     },
+    approvedAt: {
+      type: Date, // Date when the task was approved by a property manager
+      default: null,
+    },
     auditLogs: [
       {
         event: { type: String, required: true }, // Event description (e.g., "Task Created", "Status Updated")
@@ -112,7 +131,7 @@ taskSchema.pre("save", function (next) {
   if (this.isNew) {
     this.auditLogs.push({
       event: "Task Created",
-      performedBy: this.createdBy || null,
+      performedBy: this.raisedBy || null,
     });
   }
   next();
@@ -134,8 +153,8 @@ taskSchema.methods.updateStatus = async function (status, userId) {
 };
 
 /**
- * Static method to find tasks by role.
- * @param {String} role - Role (e.g., "Engineer", "Contributor").
+ * Static method to fetch tasks by role.
+ * @param {String} role - Role (e.g., "Engineer", "Contributor", "Tenant").
  * @returns {Promise} - List of tasks for the specified role.
  */
 taskSchema.statics.findByRole = async function (role) {
@@ -162,5 +181,3 @@ taskSchema.virtual("timeRemaining").get(function () {
 });
 
 module.exports = mongoose.model("Task", taskSchema);
-
-

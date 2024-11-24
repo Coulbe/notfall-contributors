@@ -5,6 +5,7 @@ const EngineerModel = require("../models/Engineer"); // Engineer schema
 const ContributorModel = require("../models/Contributor"); // Contributor schema
 const TaskModel = require("../models/Task"); // Task schema
 const logger = require("../utils/logger");
+const config = require("../config/taskMatchingConfig"); // Config file for constants
 
 /**
  * Match a task to the best candidates (engineers or contributors) using filtering and scoring.
@@ -25,7 +26,7 @@ async function matchTaskToCandidates(task, role) {
         location: {
           $near: {
             $geometry: { type: "Point", coordinates: [task.longitude, task.latitude] },
-            $maxDistance: 10000, // 10 km radius
+            $maxDistance: config.PROXIMITY_RADIUS, // Configurable radius
           },
         },
         hourlyRate: { $lte: task.hourlyRate },
@@ -49,7 +50,7 @@ async function matchTaskToCandidates(task, role) {
         expertiseMatch: role === "contributor" ? calculateExpertiseMatch(candidate, task) : null,
         userRating: candidate.userRating || 0,
         successRate: candidate.successRate || 0,
-        urgency: task.urgency === "High" ? 1 : 0,
+        urgency: task.urgency === "High" ? config.URGENCY_WEIGHT : 0, // Configurable urgency weight
       };
 
       candidate.matchScore = AIModel.predict(features);
@@ -59,8 +60,11 @@ async function matchTaskToCandidates(task, role) {
     // Step 3: Sort candidates by match score in descending order
     candidates.sort((a, b) => b.matchScore - a.matchScore);
 
-    // Step 4: Return the top 5 candidates
-    return candidates.slice(0, 5);
+    // Step 4: Filter candidates by minimum match score (configurable)
+    const filteredCandidates = candidates.filter((candidate) => candidate.matchScore >= config.MIN_MATCH_SCORE);
+
+    // Step 5: Return the top candidates (limit from config)
+    return filteredCandidates.slice(0, config.TOP_CANDIDATES_LIMIT);
   } catch (error) {
     logger.error(`Error matching task '${task.title}':`, error);
     throw new Error("Task matching failed. Please try again later.");

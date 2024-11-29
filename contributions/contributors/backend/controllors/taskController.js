@@ -1,13 +1,22 @@
+/**
+ * controllers/taskController.js
+ * Handles task-related operations, including CRUD functionality, AI-based intelligent task assignment,
+ * role-based task management, GitHub issue linking, and real-time notifications.
+ */
+
 const Task = require("../models/Task");
 const User = require("../models/User");
 const NotificationService = require("../services/notificationService");
+const githubContributorService = require("../services/githubContributorService");
 const logger = require("../utils/logger");
+const AIModel = require("../services/aiModel"); // Import AI Model for predictions
 
 /**
  * Helper function to log audit events for tasks.
+ * This function ensures that all significant events in a task's lifecycle are tracked.
  * @param {Object} task - The task being updated.
- * @param {String} event - The event description.
- * @param {ObjectId} userId - The user performing the action.
+ * @param {String} event - Description of the event (e.g., "Task created").
+ * @param {ObjectId} userId - ID of the user performing the action.
  */
 const logAuditEvent = (task, event, userId) => {
   task.auditLogs.push({
@@ -16,19 +25,21 @@ const logAuditEvent = (task, event, userId) => {
   });
 };
 
-//
-// ===== Shared Functionalities =====
-//
+/**
+ * ===== Common Functionalities =====
+ */
 
 /**
- * Fetch all tasks (Admin or Project Manager only).
+ * Fetch all tasks in the system.
+ * Only accessible by Admins and Project Managers for global monitoring.
+ * @route GET /api/tasks
+ * @access Admin, Project Manager
  */
 exports.getAllTasks = async (req, res) => {
   try {
     const tasks = await Task.find()
       .populate("assignedTo", "username role")
-      .select("-__v");
-
+      .select("-__v"); // Exclude versioning field for cleaner response
     res.status(200).json(tasks);
   } catch (error) {
     logger.error("Error fetching all tasks:", error);
@@ -37,7 +48,10 @@ exports.getAllTasks = async (req, res) => {
 };
 
 /**
- * Fetch a single task by ID.
+ * Fetch a specific task by its ID.
+ * Includes populated fields for assigned user and audit logs.
+ * @route GET /api/tasks/:taskId
+ * @access Admin, Project Manager, Assigned Users
  */
 exports.getTaskById = async (req, res) => {
   const { taskId } = req.params;
@@ -47,7 +61,7 @@ exports.getTaskById = async (req, res) => {
       .populate("assignedTo", "username role")
       .populate("auditLogs.performedBy", "username");
 
-    if (!task) return res.status(404).json({ message: "Task not found" });
+    if (!task) return res.status(404).json({ message: "Task not found." });
 
     res.status(200).json(task);
   } catch (error) {
@@ -57,7 +71,10 @@ exports.getTaskById = async (req, res) => {
 };
 
 /**
- * Create a new task (Admin or Project Manager only).
+ * Create a new task in the system.
+ * Tasks can only be created by Admins or Project Managers.
+ * @route POST /api/tasks
+ * @access Admin, Project Manager
  */
 exports.createTask = async (req, res) => {
   const { title, description, role, requiredSkills, folderAccess, priority, tags, dueDate } = req.body;
@@ -87,7 +104,10 @@ exports.createTask = async (req, res) => {
 };
 
 /**
- * Delete a task (Admin only).
+ * Delete a task from the system.
+ * This action is restricted to Admins only.
+ * @route DELETE /api/tasks/:taskId
+ * @access Admin
  */
 exports.deleteTask = async (req, res) => {
   const { taskId } = req.params;
@@ -95,7 +115,7 @@ exports.deleteTask = async (req, res) => {
   try {
     const task = await Task.findByIdAndDelete(taskId);
 
-    if (!task) return res.status(404).json({ message: "Task not found" });
+    if (!task) return res.status(404).json({ message: "Task not found." });
 
     res.status(200).json({ message: "Task deleted successfully." });
   } catch (error) {
@@ -104,77 +124,119 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
-//
-// ===== Contributor-Specific Functionalities =====
-//
+/**
+ * ===== AI-Powered Task Assignment =====
+ */
 
 /**
- * Assign a task to a contributor (Admin or Project Manager only).
+ * Match and assign tasks to the best candidate using the AI Model.
+ * The AI Model predicts a match score based on factors such as skills, workload, user rating, and proximity.
+ * @param {Object} task - The task to be assigned.
+ * @returns {Object} - The assigned user details and updated task.
  */
-exports.assignTaskToContributor = async (req, res) => {
-  const { taskId } = req.params;
-  const { contributorId } = req.body;
-
+const assignTaskUsingAI = async (task) => {
   try {
-    const task = await Task.findById(taskId);
-    const contributor = await User.findById(contributorId);
+    // Step 1: Fetch eligible users based on the task's required skills and role
+    const eligibleUsers = await User.find({
+      role: task.roleReference === "Engineer" ? "Engineer" : "Contributor",
+      skills: { $in: task.requiredSkills },
+    });
 
-    if (!task) return res.status(404).json({ message: "Task not found" });
-    if (!contributor) return res.status(404).json({ message: "Contributor not found" });
-
-    task.assignedTo = contributor._id;
-    task.status = "In Progress";
-
-    logAuditEvent(task, "Task assigned to contributor", req.user.id);
-
-    await task.save();
-
-    await NotificationService.sendNotification(
-      contributor._id,
-      `A new task has been assigned: ${task.title}. Check your dashboard for details.`
-    );
-
-    res.status(200).json({ message: "Task assigned to contributor successfully.", task });
-  } catch (error) {
-    logger.error("Error assigning task to contributor:", error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-/**
- * Submit task for review (Contributor only).
- */
-exports.submitTaskForReview = async (req, res) => {
-  const { taskId } = req.params;
-
-  try {
-    const task = await Task.findById(taskId);
-
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    if (String(task.assignedTo) !== String(req.user.id)) {
-      return res.status(403).json({ message: "This task is not assigned to you." });
+    if (!eligibleUsers.length) {
+      logger.warn(`No eligible users found for task: ${task.title}`);
+      return { message: "No eligible users available for this task." };
     }
 
-    task.status = "Pending Review";
+    // Step 2: Score candidates using the AI Model
+    const scoredCandidates = eligibleUsers.map((user) => {
+      const features = {
+        skillsMatch: user.skills.filter((skill) => task.requiredSkills.includes(skill)).length,
+        workload: user.currentTasks ? user.currentTasks.length : 0,
+        userRating: user.rating || 0,
+        proximity:
+          task.location && user.location
+            ? calculateProximity(task.location, user.location)
+            : null, // Only for engineers
+      };
+      const matchScore = AIModel.predict(features); // Predict match score using AI
+      return { user, matchScore };
+    });
 
-    logAuditEvent(task, "Task submitted for review", req.user.id);
+    // Step 3: Sort candidates by match score in descending order
+    scoredCandidates.sort((a, b) => b.matchScore - a.matchScore);
+
+    // Step 4: Assign the task to the highest-scoring user
+    const bestCandidate = scoredCandidates[0].user;
+    task.assignedTo = bestCandidate._id;
+    task.status = "In Progress";
+
+    logAuditEvent(task, `Task assigned using AI to ${bestCandidate.username}`, "System");
 
     await task.save();
 
-    res.status(200).json({ message: "Task submitted for review.", task });
+    // Step 5: Notify the assigned user
+    await NotificationService.sendNotification(
+      bestCandidate._id,
+      `A new task has been assigned to you: ${task.title}.`
+    );
+
+    logger.info(`Task '${task.title}' assigned to ${bestCandidate.username} using AI.`);
+    return { task, assignedTo: bestCandidate };
   } catch (error) {
-    logger.error("Error submitting task for review:", error);
+    logger.error(`Error assigning task using AI: ${error.message}`);
+    throw new Error("Failed to assign task using AI.");
+  }
+};
+
+/**
+ * Assign a task using the AI Model.
+ * This endpoint allows Admins and Project Managers to utilize the AI Model for assignment.
+ * @route PUT /api/tasks/:taskId/assign-ai
+ * @access Admin, Project Manager
+ */
+exports.assignTaskAI = async (req, res) => {
+  const { taskId } = req.params;
+
+  try {
+    const task = await Task.findById(taskId);
+
+    if (!task) return res.status(404).json({ message: "Task not found." });
+
+    if (task.status !== "Pending") {
+      return res.status(400).json({ message: "Task is not available for AI assignment." });
+    }
+
+    const result = await assignTaskUsingAI(task);
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error("Error assigning task using AI:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-//
-// ===== Engineer-Specific Functionalities =====
-//
+/**
+ * ===== Notifications =====
+ * Notify users about the status of their tasks.
+ * Notifications include task assignment, submission for review, and reassignment updates.
+ * Implemented using the NotificationService.
+ */
+const sendNotificationToUsers = async (userId, message) => {
+  try {
+    await NotificationService.sendNotification(userId, message);
+  } catch (error) {
+    logger.error("Error sending notification:", error);
+  }
+};
 
 /**
- * Fetch tasks available for engineers to accept.
+ * ===== Engineer-Specific Functionalities =====
+ */
+
+/**
+ * Fetch available tasks for engineers to accept.
+ * Engineers see tasks that match their skills and are within a certain proximity.
+ * @route GET /api/tasks/available-engineers
+ * @access Engineer
  */
 exports.getAvailableTasksForEngineers = async (req, res) => {
   try {
@@ -191,95 +253,5 @@ exports.getAvailableTasksForEngineers = async (req, res) => {
   } catch (error) {
     logger.error("Error fetching available tasks for engineers:", error);
     res.status(500).json({ message: error.message });
-  }
-};
-
-/**
- * Accept a task (Engineer only).
- */
-exports.acceptTask = async (req, res) => {
-  const { taskId } = req.params;
-
-  try {
-    const task = await Task.findById(taskId);
-
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    if (task.status !== "Pending") {
-      return res.status(400).json({ message: "Task is no longer available for acceptance." });
-    }
-
-    task.status = "In Progress";
-    task.assignedTo = req.user.id;
-
-    logAuditEvent(task, "Task accepted", req.user.id);
-
-    await task.save();
-
-    res.status(200).json({ message: "Task accepted successfully.", task });
-  } catch (error) {
-    logger.error("Error accepting task:", error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-/**
- * Reject a task (Engineer only).
- */
-exports.rejectTask = async (req, res) => {
-  const { taskId } = req.params;
-  const { reason } = req.body;
-
-  try {
-    const task = await Task.findById(taskId);
-
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    task.status = "Rejected";
-
-    logAuditEvent(task, `Task rejected: ${reason}`, req.user.id);
-
-    await task.save();
-
-    res.status(200).json({ message: "Task rejected successfully.", task });
-
-    // Automatically reassign the task
-    await reassignRejectedTask(task);
-  } catch (error) {
-    logger.error("Error rejecting task:", error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-/**
- * Reassign a rejected task to another user.
- */
-const reassignRejectedTask = async (task) => {
-  try {
-    const eligibleUsers = await User.find({
-      role: task.roleReference === "Engineer" ? "Engineer" : "Contributor",
-      skills: { $in: task.requiredSkills },
-    });
-
-    if (!eligibleUsers.length) {
-      logger.warn(`No eligible users found to reassign task: ${task.title}`);
-      return;
-    }
-
-    const bestUser = eligibleUsers[0]; // Add logic to determine the best match
-
-    task.assignedTo = bestUser._id;
-    task.status = "Pending";
-
-    logAuditEvent(task, "Task reassigned to another user", "System");
-
-    await task.save();
-
-    await NotificationService.sendNotification(
-      bestUser._id,
-      `A new task has been reassigned to you: ${task.title}.`
-    );
-  } catch (error) {
-    logger.error("Error reassigning rejected task:", error);
   }
 };

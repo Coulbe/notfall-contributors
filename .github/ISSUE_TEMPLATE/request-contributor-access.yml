@@ -1,40 +1,40 @@
 # .github/ISSUE_TEMPLATE/request-contributor-access.yml
-
-name: "Request Contributor Access" # The name of the issue template as displayed to users.
+name: "Request Contributor Access" # Template name displayed to users.
 description: >
-  Submit a request to become a contributor. Fill out the form below to provide your details and preferences. # A brief explanation of what the form is for.
-labels: # Labels applied to the issue when submitted.
+  Submit a request to become a contributor. Share your details, preferences, and aspirations to help us evaluate your application.
+labels: # Labels automatically added to the issue.
   - registration
   - contributor-request
   - onboarding
 
-body: # The main content of the issue template.
+body:
+  # Welcome Message
   - type: markdown
     attributes:
       value: |
         ## 🌟 Welcome to Notfall Contributors!
-        Thank you for your interest in contributing to the project. Please provide the requested details to help us evaluate your request.
+        Thank you for showing interest in joining the Notfall project. Please complete the form below to help us learn about you and your contributions.
+        
         ### 🚀 What Happens Next?
-        After submitting this form:
-        - We'll review your request promptly.
-        - You’ll receive further instructions or onboarding details if approved.
-        - Feel free to reach out in the discussions or Slack for follow-ups.
+        1. **Submission Review**: We’ll review your request promptly.
+        2. **Onboarding**: If approved, you’ll receive further instructions.
+        3. **Community Engagement**: Feel free to participate in [GitHub Discussions](https://github.com/Coulbe/notfall-contributors/discussions) and connect on Slack!
 
   # Field: GitHub Username
   - type: input
     id: github_username
     attributes:
-      label: "👤 GitHub Username" # Title for this input field.
-      description: "Enter your GitHub username for collaboration and setup." # Clarifies the purpose of this input.
-      placeholder: "YourGitHubUsername" # A hint for what the user should enter.
+      label: "👤 GitHub Username"
+      description: "Provide your GitHub username for collaboration and repository setup."
+      placeholder: "YourGitHubUsername"
 
   # Field: Reason for Contributing
   - type: textarea
     id: reason
     attributes:
       label: "✨ Reason for Contributing"
-      description: "Explain why you want to contribute and your goals." # Encourages users to share their motivation.
-      placeholder: "I want to contribute because..." # A starting prompt for users.
+      description: "What motivates you to join and contribute to this project?"
+      placeholder: "I want to contribute because..."
 
   # Field: Preferred Contribution Area(s)
   - type: dropdown
@@ -42,7 +42,7 @@ body: # The main content of the issue template.
     attributes:
       label: "📚 Preferred Contribution Area(s)"
       description: "Select the areas where you’d like to contribute. If unsure, select 'Other' and provide details below."
-      options: # Possible areas where contributors can work.
+      options:
         - Backend Development
         - Frontend Development
         - Documentation
@@ -58,8 +58,8 @@ body: # The main content of the issue template.
     id: experience_level
     attributes:
       label: "🎓 Experience Level"
-      description: "Your level of expertise in your chosen contribution area(s)." # Helps us match tasks appropriately.
-      options: # Levels of experience, with descriptions.
+      description: "Your level of expertise in your chosen area(s)."
+      options:
         - Beginner (Eager to learn)
         - Intermediate (Some experience)
         - Advanced (Independent contributor)
@@ -70,55 +70,65 @@ body: # The main content of the issue template.
     id: location
     attributes:
       label: "📍 Location"
-      description: "Where are you based? This helps us coordinate effectively for meetings or collaborations." # Context for timezone considerations.
-      placeholder: "City, Country (Timezone)" # Example input format.
+      description: "Where are you based? This helps us coordinate effectively for meetings or collaborations."
+      placeholder: "City, Country (Timezone)"
 
   # Field: Weekly Hours Commitment
   - type: input
     id: hours_commitment
     attributes:
       label: "⏳ Weekly Hours Commitment"
-      description: "How many hours can you contribute each week on average? This helps us assign tasks effectively." # Allows for realistic task assignments.
-      placeholder: "e.g., 5-10 hours per week" # Example input format.
+      description: "How many hours can you commit weekly on average?"
+      placeholder: "e.g., 5-10 hours per week"
 
   # Field: Skills and Technologies
   - type: textarea
     id: skills
     attributes:
       label: "🛠️ Skills and Technologies"
-      description: "List your technical skills, programming languages, tools, or technologies you’re proficient with." # Helps us understand your expertise.
-      placeholder: "JavaScript, Python, MongoDB, React, Solidity, Spark, SQL, etc." # Example input format.
+      description: "Share your technical skills, programming languages, tools, or technologies you’re proficient with."
+      placeholder: "JavaScript, Python, MongoDB, React, Solidity, Spark, SQL, etc."
 
   # Field: Previous Contributions
   - type: textarea
     id: past_contributions
     attributes:
       label: "🔖 Previous Contributions"
-      description: "Highlight any open-source projects, relevant work experience, or contributions to Notfall Contributors." # Encourages users to showcase their work.
-      placeholder: "Mention past projects you've worked on." # Example input format.
+      description: "Highlight any open-source projects, relevant work experience, or previous contributions to Notfall."
+      placeholder: "Mention past projects you've worked on."
 
   # Field: Goals and Expectations
   - type: textarea
     id: goals
     attributes:
       label: "🎯 Goals and Expectations"
-      description: "What do you hope to achieve through your contributions? Any specific skills you'd like to develop?" # Captures the user's aspirations.
-      placeholder: "e.g., Gain experience in full-stack development, learn about blockchain, etc." # Example goals.
+      description: "What do you hope to achieve through your contributions? Any specific skills you'd like to develop?"
+      placeholder: "e.g., Gain experience in full-stack development, learn about blockchain, etc."
 
-  # Field: Contribution Guidelines Agreement
+  # Field: Contribution Guidelines 
   - type: checkboxes
     id: guidelines_agreement
     attributes:
-      label: "📜 Contribution Guidelines Agreement"
-      description: "Please confirm that you have read and agree to follow the contribution guidelines."
-      options: # Agreement confirmation checkbox.
-        - label: "I have read and agree to the contribution guidelines."
-          required: true # Ensures users must agree before submitting.
+      label: "📜 Contribution Guidelines"
+      description: "Confirm that you have read and agree to follow the Contribution Guidelines."
+      options:
+        - label: "I have read and agree to the Contribution Guidelines."
+          required: true
+
+  # Field: License 
+  - type: checkboxes
+    id: license_agreement
+    attributes:
+      label: "📜 LICENSE"
+      description: "Please confirm that you have read and agree to the terms of the LICENSE."
+      options:
+        - label: "I have read and agree to the LICENSE terms."
+          required: true
 
   # Field: Additional Details
   - type: textarea
     id: additional_details
     attributes:
       label: "💡 Additional Details"
-      description: "Provide any other relevant information, preferences, or context about your request." # Allows for extra information.
-      placeholder: "Include extra context, such as specific tasks or teams you’d like to join." # Example input format.
+      description: "Provide any extra information, preferences, or context about your request."
+      placeholder: "Include extra context, such as specific tasks or teams you’d like to join."

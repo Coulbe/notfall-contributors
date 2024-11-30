@@ -110,7 +110,7 @@ body:
     id: guidelines_agreement
     attributes:
       label: "📜 Contribution Guidelines"
-      description: "Confirm that you have read and agree to follow the Contribution Guidelines."
+      description: "Please confirm that you have read and agree to follow the Contribution Guidelines."
       options:
         - label: "I have read and agree to the Contribution Guidelines."
           required: true

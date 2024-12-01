@@ -1,0 +1,16 @@
+name: "📋 General Issue"
+description: "For reporting general issues not covered by other templates."
+labels: ["question", "general"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📋 General Issue
+        Provide details of your issue.
+
+  - type: textarea
+    id: issue_details
+    attributes:
+      label: "📄 Details"
+      description: "Describe the issue in detail."
+      placeholder: "Include any relevant information."

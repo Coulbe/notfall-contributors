@@ -1,0 +1,69 @@
+# .github/config.yml
+# Configuration for GitHub repository automation, issue templates, branch protection, and community settings.
+
+# Issue and Pull Request Settings
+issues:
+  enabled: true # Enable issue tracking
+  labels: # Default labels applied to new issues
+    - "triage"
+    - "needs-review"
+  assignees: # Default assignees for new issues
+    - "Coulbe"
+
+pull_requests:
+  enabled: true # Enable pull request tracking
+  labels: # Default labels applied to new pull requests
+    - "needs-review"
+    - "ci-pending"
+  reviewers: # Default reviewers for new pull requests
+    - "Coulbe"
+    - "code-review-team"
+
+# Templates for Issue Creation
+issue_templates:
+  - name: "Bug Report"
+    file: ".github/ISSUE_TEMPLATE/bug_report.yml"
+    about: "Report a bug in the repository to help us improve."
+  - name: "Feature Request"
+    file: ".github/ISSUE_TEMPLATE/feature_request.yml"
+    about: "Suggest a new feature or enhancement for the project."
+  - name: "Custom Issue Template"
+    file: ".github/ISSUE_TEMPLATE/custom_template.yml"
+    about: "A general-purpose issue template for other types of feedback."
+
+# Repository-Level Actions and Branch Protection
+actions:
+  branch_protection:
+    enabled: true
+    branches:
+      - name: "main"
+        required_status_checks:
+          strict: true
+          contexts: # List of status checks required before merging
+            - "CI Tests"
+            - "Lint Checks"
+        enforce_admins: true # Apply branch protection rules to admins
+        required_pull_request_reviews:
+          required_approving_review_count: 2 # Number of approving reviews required
+        restrictions: # Restrict branch access to specific users and teams
+          users:
+            - "admin-user"
+          teams:
+            - "core-team"
+
+# Community Health Settings
+community:
+  blank_issues_enabled: false # Disable blank issue creation to encourage use of templates
+  contact_links: # Provide links for external support and collaboration
+    - name: "Community Discussions"
+      url: "https://github.com/Coulbe/notfall-contributors/discussions"
+      about: "Join discussions with the Notfall community to ask questions or share ideas."
+    - name: "Slack Channel"
+      url: "https://notfall.slack.com"
+      about: "Collaborate in real-time with the team on our Slack channel."
+
+# Additional Repository Configurations
+repository_settings:
+  archive_on_inactivity: false # Prevent automatic archiving due to inactivity
+  default_branch: "main" # Define the default branch for the repository
+  delete_head_branches_on_merge: true # Automatically delete head branches after PR merge

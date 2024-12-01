@@ -1,0 +1,18 @@
+name: Validate Issue Templates
+
+on:
+  push:
+    paths:
+      - ".github/ISSUE_TEMPLATE/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate YAML files
+        uses: caarlos0/yaml-lint-action@v1
+        with:
+          yaml_files: ".github/ISSUE_TEMPLATE/*.yml"

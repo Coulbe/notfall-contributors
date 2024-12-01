@@ -1,0 +1,20 @@
+name: "Enforce Branch Protection"
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  enforce-branch-protection:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ensure Branch Protection is Enabled
+        run: |
+          echo "Enforcing branch protection rules for main branch..."
+          gh api -X PUT /repos/Coulbe/notfall-contributors/branches/main/protection \
+            -F required_status_checks.contexts='["CI Tests", "Lint Checks"]' \
+            -F required_status_checks.strict=true \
+            -F enforce_admins=true \
+            -F required_pull_request_reviews.required_approving_review_count=2

@@ -1,0 +1,68 @@
+name: Deployment Workflow
+
+# Workflow triggers
+on:
+  workflow_dispatch:       # Manual trigger for deployments
+  push:                    # Trigger on push to main or production branches
+    branches:
+      - main
+      - production
+
+# Define the jobs
+jobs:
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18   # Specify the Node.js version
+
+      # Step 3: Install dependencies
+      - name: Install Backend Dependencies
+        run: |
+          cd backend       # Navigate to the backend directory
+          npm install      # Install backend dependencies
+
+      # Step 4: Deploy Backend
+      - name: Deploy Backend
+        run: |
+          cd backend       # Navigate to the backend directory
+          npm run build    # Build backend services
+          npm run deploy   # Deploy backend services
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: deploy-backend   # Frontend deploys after backend deployment
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18   # Specify the Node.js version
+
+      # Step 3: Install dependencies
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend      # Navigate to the frontend directory
+          npm install      # Install frontend dependencies
+
+      # Step 4: Build and Deploy Frontend
+      - name: Deploy Frontend
+        run: |
+          cd frontend      # Navigate to the frontend directory
+          npm run build    # Build the frontend application
+          npm run deploy   # Deploy the frontend application

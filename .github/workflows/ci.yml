@@ -1,0 +1,78 @@
+name: CI Pipeline
+
+# Workflow triggers
+on:
+  push:          # Triggered on push to any branch
+    branches:
+      - main     # Specify branches to monitor
+      - develop
+  pull_request:  # Triggered on pull requests to the main or develop branches
+    branches:
+      - main
+      - develop
+
+# Define the jobs
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest   # The OS environment for the job
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18   # Specify the Node.js version
+
+      # Step 3: Install dependencies
+      - name: Install Dependencies
+        run: npm install     # Installs all necessary dependencies
+
+      # Step 4: Run tests
+      - name: Run Tests
+        run: npm test        # Runs the project's test suite
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18   # Specify the Node.js version
+
+      # Step 3: Run linting
+      - name: Lint Code
+        run: npm run lint    # Checks code formatting and style
+
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: [build, lint]   # Runs only after successful build and linting jobs
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18   # Specify the Node.js version
+
+      # Step 3: Deploy to production
+      - name: Deploy to Production
+        run: |
+          npm run build      # Build the application
+          npm run deploy     # Deploy the application

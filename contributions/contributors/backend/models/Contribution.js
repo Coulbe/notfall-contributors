@@ -1,16 +1,21 @@
 /**
  * models/Contribution.js
  * MongoDB schema for managing contributions in the Notfall Contributors system.
- * Handles contributor submissions, reward calculations, and status updates.
+ * Features include:
+ * - Contributor submissions
+ * - Reward calculations and Notcoin integration
+ * - Status updates and validations
+ * - Task linking and GitHub issue tracking
  */
 
 const mongoose = require("mongoose");
 
+// Define the Contribution schema
 const contributionSchema = new mongoose.Schema(
   {
     contributorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Contributor",
+      ref: "Contributor", // Links to the Contributor model
       required: [true, "Contributor ID is required"],
     },
     description: {
@@ -26,6 +31,7 @@ const contributionSchema = new mongoose.Schema(
     subcategory: {
       type: String,
       maxlength: [100, "Subcategory cannot exceed 100 characters"],
+      default: null,
     },
     complexityScore: {
       type: Number,
@@ -39,9 +45,14 @@ const contributionSchema = new mongoose.Schema(
       min: [1, "Impact score must be at least 1"],
       max: [5, "Impact score cannot exceed 5"],
     },
-    date: {
-      type: Date,
-      default: Date.now, // Automatically set to the current date
+    githubIssue: {
+      issueNumber: { type: Number, default: null }, // Tracks linked GitHub issue
+      url: { type: String, default: null }, // GitHub issue URL
+    },
+    linkedTask: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Task", // Links to a specific Task
+      default: null,
     },
     status: {
       type: String,
@@ -50,7 +61,11 @@ const contributionSchema = new mongoose.Schema(
     },
     rewardTokens: {
       type: Number,
-      default: 0, // Default reward tokens set to 0
+      default: 0, // Initial reward token value
+    },
+    notcoinsEarned: {
+      type: Number,
+      default: 0, // Total Notcoins earned for this contribution
     },
   },
   {
@@ -59,43 +74,44 @@ const contributionSchema = new mongoose.Schema(
 );
 
 /**
- * Method to calculate reward tokens based on complexity and impact scores.
- * @returns {Number} - The calculated reward tokens.
+ * Calculates reward tokens for a contribution.
+ * The calculation considers complexity, impact, and category-specific bonuses.
+ * @returns {Number} - Calculated reward tokens.
  */
 contributionSchema.methods.calculateRewardTokens = function () {
-  const baseReward = 10; // Base reward in tokens
-  const complexityMultiplier = this.complexityScore * 2; // Complexity influences reward
-  const impactMultiplier = this.impactScore * 3; // Impact influences reward
-  const categoryBonus = this.category === "Feature Development" ? 5 : 0; // Bonus for specific categories
+  const baseReward = 10; // Base reward for all contributions
+  const complexityMultiplier = this.complexityScore * 2; // Multiplier for complexity
+  const impactMultiplier = this.impactScore * 3; // Multiplier for impact
+  const categoryBonus = this.category === "Feature Development" ? 5 : 0; // Extra reward for feature contributions
 
   return baseReward + complexityMultiplier + impactMultiplier + categoryBonus;
 };
 
 /**
- * Method to reward tokens to the contributor for a successful contribution.
- * Updates the contributor's wallet balance and the contribution status.
- * @returns {Object} - Object containing rewarded tokens and updated contributor details.
+ * Rewards the contributor for an approved contribution.
+ * Updates the contributor's wallet and marks the contribution as approved.
+ * @returns {Object} - Details of the rewarded tokens and updated contributor.
  */
 contributionSchema.methods.rewardContributor = async function () {
-  const Contributor = mongoose.model("Contributor"); // Dynamically import Contributor to avoid circular dependency
-
-  // Calculate tokens
+  const Contributor = mongoose.model("Contributor"); // Avoid circular dependency
   const tokens = this.calculateRewardTokens();
 
-  // Fetch contributor details
   const contributor = await Contributor.findById(this.contributorId);
   if (!contributor) {
     throw new Error("Contributor not found");
   }
 
-  // Update contributor's wallet balance
-  contributor.wallet.balance += tokens;
+  // Update contributor's rewards and achievements
+  contributor.rewards.notcoins += tokens;
+  contributor.rewards.achievements.push(
+    `Earned ${tokens} Notcoins for ${this.category}`
+  );
 
-  // Update contribution status and reward tokens
+  // Update contribution details
   this.rewardTokens = tokens;
+  this.notcoinsEarned = tokens;
   this.status = "Approved";
 
-  // Save updates to both the contributor and contribution
   await contributor.save();
   await this.save();
 
@@ -103,14 +119,41 @@ contributionSchema.methods.rewardContributor = async function () {
 };
 
 /**
- * Middleware to ensure data integrity before saving.
- * Validates required fields and logs creation events.
+ * Middleware to validate essential fields before saving a contribution.
  */
 contributionSchema.pre("save", function (next) {
   if (!this.description || !this.category || !this.complexityScore || !this.impactScore) {
-    throw new Error("Missing required fields for the contribution");
+    throw new Error("Missing required fields for the contribution.");
   }
   next();
 });
+
+/**
+ * Static method to fetch contributions by status.
+ * @param {String} status - Contribution status (e.g., "Pending", "Approved").
+ * @returns {Array} - List of contributions matching the status.
+ */
+contributionSchema.statics.findByStatus = async function (status) {
+  return await this.find({ status });
+};
+
+/**
+ * Virtual field to get a concise summary of the contribution.
+ * @returns {String} - Summary string.
+ */
+contributionSchema.virtual("summary").get(function () {
+  return `${this.category} contribution by contributor ID ${this.contributorId}`;
+});
+
+/**
+ * Static method to link a GitHub issue with a contribution.
+ * @param {Object} contribution - Contribution object.
+ * @param {Object} githubIssue - GitHub issue details.
+ */
+contributionSchema.statics.linkGitHubIssue = async function (contribution, githubIssue) {
+  contribution.githubIssue.issueNumber = githubIssue.number;
+  contribution.githubIssue.url = githubIssue.html_url;
+  await contribution.save();
+};
 
 module.exports = mongoose.model("Contribution", contributionSchema);

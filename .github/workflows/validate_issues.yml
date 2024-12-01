@@ -1,0 +1,43 @@
+name: "Validate Issues"
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  validate-issue:
+    runs-on: ubuntu-latest
+    name: "Validate GitHub Issue Template Compliance"
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      # Step 3: Install dependencies for validation
+      - name: Install Validation Tools
+        run: |
+          npm install ajv-cli
+          echo "Validation tools installed successfully."
+
+      # Step 4: Validate the issue event against a schema
+      - name: Validate Issue Format
+        run: |
+          npx ajv validate -s .github/issue-schema.json -d .github/ISSUE_TEMPLATE/*.yml
+        env:
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+
+      # Step 5: Annotate errors in the issue if invalid
+      - name: Annotate Errors
+        if: failure()
+        uses: github/super-linter@v4
+        with:
+          error_on_failure: true
+          validate-yaml: true
+          report-extras: false

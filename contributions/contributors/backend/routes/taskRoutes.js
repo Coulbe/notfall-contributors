@@ -1,122 +1,148 @@
-const express = require('express');
+const express = require("express");
 const {
-  getAllTasks,
-  getTaskById,
-  createTask,
-  updateTask,
-  updateTaskStatus,
-  deleteTask,
+  getAllContributors,
+  getContributorById,
+  createContributor,
+  updateContributor,
+  updateContributorRole,
   assignTaskToContributor,
-  getMyTasks,
-} = require('../controllers/taskController');
-const { verifyToken } = require('../middleware/authMiddleware');
-const { validateRole, checkPermissions, logAccessAttempt } = require('../middleware/roleMiddleware');
-const { logDataModification } = require('../middleware/auditMiddleware');
+  logActivity,
+  deleteContributor,
+  getContributorTasks,
+  addContributor,
+} = require("../controllers/contributorController");
+const { verifyToken } = require("../middleware/authMiddleware");
+const { validateRole, logAccessAttempt } = require("../middleware/roleMiddleware");
+const { logDataModification, logFailedAction } = require("../middleware/auditMiddleware");
 
 const router = express.Router();
 
 /**
- * @route   GET /tasks
- * @desc    Fetch all tasks (Admin, ProjectManager)
- * @access  Protected
+ * Contributor Routes
+ * Handles CRUD operations, role management, task assignment, and activity logging
+ * for contributors in the Notfall system.
+ */
+
+/**
+ * @route   GET /contributors
+ * @desc    Fetch all contributors
+ * @access  Protected (Admin, ProjectManager)
  */
 router.get(
-  '/',
+  "/",
   verifyToken,
-  validateRole(['Admin', 'ProjectManager']),
-  logAccessAttempt('tasks'),
-  getAllTasks
+  validateRole(["Admin", "ProjectManager"]),
+  logAccessAttempt("contributors"),
+  getAllContributors
 );
 
 /**
- * @route   GET /tasks/:taskId
- * @desc    Fetch task by ID (Self, Admin, ProjectManager)
- * @access  Protected
+ * @route   GET /contributors/:contributorId
+ * @desc    Fetch a specific contributor by ID
+ * @access  Protected (Self, Admin, ProjectManager)
  */
 router.get(
-  '/:taskId',
+  "/:contributorId",
   verifyToken,
-  checkPermissions('tasks'),
-  logAccessAttempt('tasks'),
-  getTaskById
+  logAccessAttempt("contributors"),
+  getContributorById
 );
 
 /**
- * @route   POST /tasks
- * @desc    Create a new task (Admin, ProjectManager)
- * @access  Protected
+ * @route   POST /contributors
+ * @desc    Create a new contributor
+ * @access  Protected (Admin)
  */
 router.post(
-  '/',
+  "/",
   verifyToken,
-  validateRole(['Admin', 'ProjectManager']),
-  logDataModification('tasks', 'CREATE'),
-  createTask
+  validateRole(["Admin"]),
+  logDataModification("contributors", "CREATE"),
+  createContributor
 );
 
 /**
- * @route   PUT /tasks/:taskId
- * @desc    Update task details (Admin, ProjectManager)
+ * @route   POST /contributors/add
+ * @desc    Add a contributor (Simplified endpoint for internal use)
  * @access  Protected
+ */
+router.post("/add", verifyToken, addContributor);
+
+/**
+ * @route   PUT /contributors/:contributorId
+ * @desc    Update contributor details
+ * @access  Protected (Admin)
  */
 router.put(
-  '/:taskId',
+  "/:contributorId",
   verifyToken,
-  validateRole(['Admin', 'ProjectManager']),
-  logDataModification('tasks', 'UPDATE'),
-  updateTask
+  validateRole(["Admin"]),
+  logDataModification("contributors", "UPDATE"),
+  updateContributor
 );
 
 /**
- * @route   PATCH /tasks/:taskId/status
- * @desc    Update task status (Self, Admin, ProjectManager)
- * @access  Protected
+ * @route   PATCH /contributors/:contributorId/role
+ * @desc    Update contributor role
+ * @access  Protected (Admin)
  */
 router.patch(
-  '/:taskId/status',
+  "/:contributorId/role",
   verifyToken,
-  checkPermissions('tasks'),
-  logDataModification('tasks', 'UPDATE_STATUS'),
-  updateTaskStatus
+  validateRole(["Admin"]),
+  logDataModification("contributors", "UPDATE_ROLE"),
+  updateContributorRole
 );
 
 /**
- * @route   DELETE /tasks/:taskId
- * @desc    Delete a task (Admin)
- * @access  Protected
- */
-router.delete(
-  '/:taskId',
-  verifyToken,
-  validateRole(['Admin']),
-  logDataModification('tasks', 'DELETE'),
-  deleteTask
-);
-
-/**
- * @route   POST /tasks/:taskId/assign
- * @desc    Assign a task to a contributor (Admin, ProjectManager)
- * @access  Protected
+ * @route   POST /contributors/:contributorId/tasks
+ * @desc    Assign a task to a contributor
+ * @access  Protected (Admin, ProjectManager)
  */
 router.post(
-  '/:taskId/assign',
+  "/:contributorId/tasks",
   verifyToken,
-  validateRole(['Admin', 'ProjectManager']),
-  logDataModification('tasks', 'ASSIGN'),
+  validateRole(["Admin", "ProjectManager"]),
+  logDataModification("tasks", "ASSIGN"),
   assignTaskToContributor
 );
 
 /**
- * @route   GET /tasks/my-tasks
- * @desc    Fetch tasks assigned to the logged-in contributor (Contributor)
- * @access  Protected
+ * @route   GET /contributors/:contributorId/tasks
+ * @desc    Fetch tasks assigned to a specific contributor
+ * @access  Protected (Admin, ProjectManager)
  */
 router.get(
-  '/my-tasks',
+  "/:contributorId/tasks",
   verifyToken,
-  validateRole(['Contributor']),
-  logAccessAttempt('my-tasks'),
-  getMyTasks
+  validateRole(["Admin", "ProjectManager"]),
+  logAccessAttempt("tasks"),
+  getContributorTasks
+);
+
+/**
+ * @route   POST /contributors/:contributorId/activity
+ * @desc    Log activity for a specific contributor
+ * @access  Protected (Self, Admin, ProjectManager)
+ */
+router.post(
+  "/:contributorId/activity",
+  verifyToken,
+  logDataModification("activity", "LOG"),
+  logActivity
+);
+
+/**
+ * @route   DELETE /contributors/:contributorId
+ * @desc    Delete a contributor
+ * @access  Protected (Admin)
+ */
+router.delete(
+  "/:contributorId",
+  verifyToken,
+  validateRole(["Admin"]),
+  logDataModification("contributors", "DELETE"),
+  deleteContributor
 );
 
 module.exports = router;

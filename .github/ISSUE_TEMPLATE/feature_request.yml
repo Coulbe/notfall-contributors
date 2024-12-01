@@ -1,0 +1,45 @@
+name: "✨ Feature Request"
+description: "Suggest new features or improvements."
+labels:
+  - "enhancement"
+  - "feature-request"
+  - "priority: medium"
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ✨ Feature Request
+        Share your ideas for new features or improvements.
+
+  - type: input
+    id: title
+    attributes:
+      label: "Feature Title"
+      description: "Summarize the feature you’re requesting."
+      placeholder: "Real-time notifications for tasks"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Feature Description"
+      description: "Describe the feature in detail."
+      placeholder: "Explain how this feature will work."
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: "Use Case"
+      description: "Who will benefit and how?"
+      placeholder: "e.g., Engineers will be notified of tasks instantly."
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      description: "How important is this feature?"
+      options:
+        - "Critical"
+        - "High"
+        - "Medium"
+        - "Low"

@@ -1,0 +1,121 @@
+# CODEOWNERS for Notfall Engineers On-Demand
+# Maps specific teams and roles to various parts of the repository for streamlined code reviews.
+# This structure ensures clarity, redundancy, and effective ownership of tasks.
+
+# ==========================
+# General Defaults
+# ==========================
+# Default owners for all files not explicitly listed
+*@Coulbe @project-maintainer
+
+# ==========================
+# Backend Ownership
+# ==========================
+# Core backend files 
+/backend/                @backend-lead @backend-dev1 @backend-dev2
+/backend/controllers/    @backend-lead @senior-backend-dev
+/backend/models/         @backend-lead @backend-dev1
+/backend/services/       @backend-lead @blockchain-expert
+
+# Specific controllers
+/backend/controllers/authController.js        @security-expert @backend-lead
+/backend/controllers/contributorController.js @backend-lead @onboarding-lead
+/backend/controllers/engineerController.js    @backend-lead @task-manager
+/backend/controllers/taskController.js        @backend-lead @ai-specialist @senior-backend-dev
+/backend/controllers/rewardController.js      @backend-lead @blockchain-expert
+/backend/controllers/dispatchController.js    @backend-lead @notification-specialist
+/backend/controllers/analyticsController.js   @analytics-lead @backend-dev1
+
+# Specific services
+/backend/services/blockchain/                 @blockchain-expert @backend-lead
+/backend/services/taskMatchingService/        @ai-specialist @backend-lead
+/backend/services/rewardDistributionService/  @backend-lead @reward-analyst
+
+# Middleware and configuration
+/backend/middleware/          @security-expert @backend-lead
+/backend/config/              @sys-admin @config-lead @backend-lead
+
+# ==========================
+# Frontend Ownership
+# ==========================
+# Core frontend files
+/frontend/                    @frontend-lead @frontend-dev1 @frontend-dev2
+/frontend/src/components/     @frontend-lead @ui-ux-designer @frontend-dev2
+/frontend/src/pages/          @frontend-lead @ui-ux-designer @frontend-dev1
+/frontend/src/utils/          @frontend-lead @frontend-dev1
+
+# Specific components
+/frontend/src/components/dashboard/           @frontend-lead @analytics-lead
+/frontend/src/components/notifications/       @frontend-lead @backend-lead
+
+# Page-specific ownership
+/frontend/src/pages/AdminDashboard.jsx        @analytics-lead @frontend-lead
+/frontend/src/pages/ContributorDashboard.jsx  @frontend-lead @ui-ux-designer
+/frontend/src/pages/TaskDetails.jsx           @frontend-lead @ai-specialist
+
+# ==========================
+# Blockchain Team Ownership
+# ==========================
+# Smart contracts
+/contracts/                 @blockchain-expert @solidity-dev
+/contracts/Notcoin.sol      @blockchain-expert @backend-lead
+/contracts/Vesting.sol      @blockchain-expert @backend-lead
+
+# Deployments
+/contracts/deployments/     @blockchain-expert @ci-cd-maintainer
+
+# ==========================
+# DevOps and Workflows
+# ==========================
+/.github/                   @devops-lead @ci-cd-maintainer
+/.github/workflows/ci.yml   @ci-cd-maintainer @security-expert
+/.github/workflows/deployment.yml @devops-lead @sys-admin
+
+# ==========================
+# Documentation and Guidelines
+# ==========================
+/docs/                      @doc-lead @tech-writer1 @tech-writer2
+/README.md                  @project-maintainer @doc-lead @ui-ux-designer
+/LICENSE                    @project-maintainer @legal-expert
+/contributions/             @onboarding-lead @doc-lead
+
+# ==========================
+# Analytics and Reporting
+# ==========================
+/backend/controllers/analyticsController.js @analytics-lead @backend-dev1
+/frontend/src/components/analytics/         @frontend-lead @analytics-lead
+/frontend/src/pages/AdminDashboard.jsx      @analytics-lead @ui-ux-designer
+
+# ==========================
+# Notifications
+# ==========================
+/backend/services/notificationService.js    @backend-lead @frontend-lead
+/frontend/src/components/notifications/     @frontend-lead @backend-lead
+
+# ==========================
+# GitHub Integrations
+# ==========================
+/controllers/githubWebhookController.js     @ci-cd-maintainer @devops-lead
+/services/githubService.js                  @github-api-specialist @backend-lead
+
+# ==========================
+# Sensitive Files and Configurations
+# ==========================
+/.env.example                @sys-admin @security-expert
+/backend/config/database.js  @config-lead @backend-lead
+/backend/config/logger.js    @sys-admin @backend-lead
+/backend/config/serverConfig.js @sys-admin @backend-lead
+
+# ==========================
+# Task and Workflow Tracking
+# ==========================
+/tasks/                      @task-lead @backend-lead @frontend-lead
+/tasks/bugfixes/             @task-lead @senior-backend-dev @frontend-dev1
+/tasks/features/             @task-lead @ui-ux-designer @frontend-dev2
+/tasks/templates/            @task-lead @ui-ux-designer
+
+# ==========================
+# AI and ML Features
+# ==========================
+/backend/controllers/taskController.js      @ai-specialist @backend-lead
+/backend/services/taskMatchingService/      @ai-specialist @backend-lead

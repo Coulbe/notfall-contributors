@@ -5,7 +5,11 @@ const User = require("../models/User");
 const NotificationService = require("../services/notificationService");
 const githubIssueService = require("../services/githubIssueService");
 const AIModel = require("../services/aiModel");
+const findBestEngineer = require("../taskMatchingService/engineerFinder");
+const calculateTaskPriority = require("../taskMatchingService/taskPriority");
+const { sendTaskAssignmentNotification } = require("../taskMatchingService/notificationHandler");
 const logger = require("../utils/logger");
+
 
 /**
  * Helper function to log audit events for tasks.
